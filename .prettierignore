@@ -1,0 +1,10 @@
+dist
+node_modules
+package-lock.json
+supabase/.temp
+# Documents of record are prose with deliberate line breaks; they are not reformatted.
+docs
+*.md
+# Strict JSON on purpose: cairn's workspace-scope hook reads it with json.loads, and Prettier
+# would add trailing commas that VS Code accepts and a strict parser rejects.
+*.code-workspace

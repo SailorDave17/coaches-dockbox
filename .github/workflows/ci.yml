@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [develop, release, main]
+  workflow_dispatch:
+    inputs:
+      mutation:
+        description: 'prove-tests: apply tests/mutations/<name>.sql before the DB tests (expect red)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: lint, format, types, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # Each is a failing step: a check that only warns is how the first thousand warnings start.
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm run build
+
+  db-tests:
+    name: medical access against a local Supabase
+    runs-on: ubuntu-latest
+    env:
+      # ghcr.io throttled `supabase start` pulls in this workspace on 2026-09-23 and a token
+      # docker login did not lift it; this registry did (cairn memory, ghcr-throttle note).
+      SUPABASE_INTERNAL_IMAGE_REGISTRY: public.ecr.aws
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Start Supabase (applies supabase/migrations)
+        run: npx supabase start
+      - name: Export the local credentials to later steps
+        run: npx supabase status -o env | sed 's/"//g' >> "$GITHUB_ENV"
+      - name: Apply a prove-tests mutation (hand-run only)
+        if: ${{ inputs.mutation != '' }}
+        env:
+          MUTATION: ${{ inputs.mutation }}
+        run: |
+          [[ "$MUTATION" =~ ^[a-z0-9-]+$ ]] || { echo "mutation name must be kebab-case"; exit 1; }
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "tests/mutations/${MUTATION}.sql"
+      - run: npm run test:db

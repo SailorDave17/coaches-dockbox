@@ -1,0 +1,27 @@
+# Weekly, reviewed by the owner, never auto-merged (charter: Security & compliance).
+# Lockstep peers are grouped: two packages that pin each other get separate PRs otherwise, and
+# either one alone writes a lockfile `npm ci` refuses (tender #168). A group's `applies-to` is
+# version-updates OR security-updates, never both, so each group is declared twice.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      react:
+        applies-to: version-updates
+        patterns: ['react', 'react-dom', '@types/react', '@types/react-dom']
+      react-security:
+        applies-to: security-updates
+        patterns: ['react', 'react-dom', '@types/react', '@types/react-dom']
+      vite:
+        applies-to: version-updates
+        patterns: ['vite', '@vitejs/*', 'vitest', '@vitest/*']
+      vite-security:
+        applies-to: security-updates
+        patterns: ['vite', '@vitejs/*', 'vitest', '@vitest/*']
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

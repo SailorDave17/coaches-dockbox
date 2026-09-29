@@ -1,0 +1,4 @@
+# Appended to the branches githooks/pre-push refuses outright (develop, main and master are
+# always refused). `release` is production: a push to it is a deploy (ADR 008), so it is entered
+# only by a pull request the owner merges.
+release

@@ -1,0 +1,11 @@
+# Everything is LF in the repository and in the working tree.
+* text=auto eol=lf
+
+# githooks/ holds a POSIX shell script and plain-text lists that githooks/pre-push reads line by
+# line. Checked out CRLF, `release\r` stops equalling `release` and the branch falls through the
+# owner-only list (measured on Taskr 2026-08-05: file present, `git status` clean, guard silently
+# off). The hook strips a trailing CR as well; neither half replaces the other.
+/githooks/*    text eol=lf
+
+*.png binary
+*.ico binary

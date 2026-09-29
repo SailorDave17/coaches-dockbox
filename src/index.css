@@ -1,0 +1,32 @@
+/* Brand palette sampled from the COHSSA burgee (cohssa-attendance). Glare rule: cyan carries dark ink, never white. */
+:root {
+  --cyan: #00aeef;
+  --cyan-deep: #0077a8;
+  --cyan-pale: #edf8fe;
+  --red: #bd3426;
+  --red-dark: #a32c1d;
+  --navy: #3e4369;
+  --navy-deep: #2c3050;
+  --ink: #12182b;
+  --paper: #f5f9fc;
+
+  color-scheme: light;
+  font:
+    17px/1.4 system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+body {
+  margin: 0;
+}
+
+.shell {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
