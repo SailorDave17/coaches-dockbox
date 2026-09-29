@@ -38,6 +38,9 @@ jobs:
       # ghcr.io throttled `supabase start` pulls in this workspace on 2026-09-23 and a token
       # docker login did not lift it; this registry did (cairn memory, ghcr-throttle note).
       SUPABASE_INTERNAL_IMAGE_REGISTRY: public.ecr.aws
+      # Start only what the test uses: postgres (always), gotrue, postgrest and kong. On this
+      # repo's first push ECR refused `storage-api` and `studio`, two images the test never needs.
+      SUPABASE_EXCLUDE: realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -46,7 +49,21 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Start Supabase (applies supabase/migrations)
-        run: npx supabase start
+        # Retries only when the CLI gives up on an image pull. It prints `toomanyrequests` for
+        # every refused try, including the ones it recovers from, so keying on that word would
+        # retry a broken migration too (cairn memory, ghcr-throttle note, 2026-09-26). A
+        # `Data limit exceeded` refusal does not clear inside one job: re-run the job instead.
+        run: |
+          for attempt in 1 2 3; do
+            if npx supabase start -x "$SUPABASE_EXCLUDE" 2>&1 | tee start.log; then exit 0; fi
+            if ! grep -q "failed to pull docker image" start.log; then
+              echo "supabase start failed, not on an image pull: not retrying"; exit 1
+            fi
+            echo "image pull refused (attempt $attempt of 3); retrying in 30 s"
+            npx supabase stop --no-backup > /dev/null 2>&1 || true
+            sleep 30
+          done
+          echo "supabase start: every attempt failed to pull an image"; exit 1
       - name: Export the local credentials to later steps
         run: npx supabase status -o env | sed 's/"//g' >> "$GITHUB_ENV"
       - name: Apply a prove-tests mutation (hand-run only)
