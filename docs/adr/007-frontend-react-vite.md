@@ -24,3 +24,12 @@ back to it. *Measured* in CI run 36657679343, on that merge commit: lint (oxlint
 answers the TypeScript 7 compatibility question this ADR deferred to the scaffold. That run's other
 job, the database test, failed before any test ran because the local Supabase never started (an
 image pull refused with `toomanyrequests`, #27). That job passed on 7.0.2 at run 36726856023.
+
+**Amended 2026-09-30 (#31).** **vite-plugin-pwa 1.3.0** arrived as a devDependency with the
+throwaway device probe in `spikes/device-probe/`. That is its first use against Vite 8 here: its
+peer range includes Vite 8, and on Vite 8.3.1 it built the probe's service worker (Workbox 7.4.1,
+`generateSW`, `autoUpdate`). *Measured* in a session run of desktop Chrome 153: the worker served the
+probe with the network off. Only the probe's own config loads the plugin. `src/` does not import it,
+and the app's `npm run build` produced a bundle byte-identical to `develop`'s (all 4 files, by
+sha256). The installability story (#42) still decides how the app uses it. This does not answer the
+kill condition above, which is about iOS; the real-phone reading is #37.

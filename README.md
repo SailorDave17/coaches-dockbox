@@ -66,6 +66,7 @@ The app refuses to start without those two values, on purpose.
 | `npm run format:check` | Prettier |
 | `npm run typecheck` | `tsc -b` |
 | `npm run test:db` | The medical-access test against a local Supabase |
+| `npm run probe:build` | The throwaway device probe (#31), not the app: [`spikes/device-probe/`](spikes/device-probe/README.md) |
 
 `test:db` needs a local Supabase (`npx supabase start`, which needs Docker) and its credentials
 exported from `npx supabase status -o env`. CI runs it on every pull request. To prove it can fail,

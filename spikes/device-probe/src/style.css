@@ -1,0 +1,165 @@
+/* The app's palette (src/index.css), so the probe reads in the same glare. Text on paper is at least 7:1 (D23). */
+:root {
+  --navy: #3e4369;
+  --navy-deep: #2c3050;
+  --ink: #12182b;
+  --paper: #f5f9fc;
+  --line: #c9d3dd;
+  --pass: #145224;
+  --fail: #a32c1d;
+  --muted: #3a4152;
+
+  color-scheme: light;
+  font:
+    17px/1.4 system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+body {
+  margin: 0;
+}
+
+.shell {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 16px 16px 48px;
+}
+
+h1 {
+  font-size: 1.4rem;
+  margin: 0 0 4px;
+}
+
+h2 {
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.top p,
+.proves {
+  color: var(--muted);
+  margin: 6px 0 10px;
+}
+
+.row {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 12px;
+}
+
+.row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* The status is in the words; the colour only repeats it. */
+.badge {
+  flex: none;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 2px solid var(--muted);
+  color: var(--muted);
+}
+
+.badge[data-status='pass'] {
+  border-color: var(--pass);
+  color: var(--pass);
+}
+
+.badge[data-status='fail'] {
+  border-color: var(--fail);
+  color: var(--fail);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+button {
+  font: inherit;
+  min-height: 48px;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--navy);
+  color: #fff;
+}
+
+button.secondary {
+  background: #fff;
+  color: var(--navy-deep);
+  border: 2px solid var(--navy);
+}
+
+button:disabled {
+  opacity: 0.6;
+}
+
+button:focus-visible,
+a:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* Each link is one block, at least 56 px each way, with a gap so neither tap lands on the other. */
+.contacts {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.contact {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  min-width: 56px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--navy);
+  color: #fff;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+}
+
+.clock {
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+  margin: 0 0 10px;
+}
+
+.detail {
+  margin: 10px 0 0;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.detail:empty {
+  display: none;
+}
+
+textarea {
+  box-sizing: border-box;
+  width: 100%;
+  font:
+    0.8rem/1.3 ui-monospace,
+    monospace;
+  margin-top: 8px;
+}
