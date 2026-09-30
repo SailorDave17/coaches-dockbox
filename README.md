@@ -70,6 +70,9 @@ The app refuses to start without those two values, on purpose.
 `test:db` needs a local Supabase (`npx supabase start`, which needs Docker) and its credentials
 exported from `npx supabase status -o env`. CI runs it on every pull request. To prove it can fail,
 run the CI workflow by hand with `mutation: medical-ignores-program`: exactly one case should go red.
+To prove the `Start Supabase` step fails where it fails, run it by hand with a `plant`:
+`unreachable-registry` fails every pull, so the step tries three times and then names each refused
+image. `broken-migration` fails on attempt 1 and is not retried.
 
 ## Branches
 
