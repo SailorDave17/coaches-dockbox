@@ -85,6 +85,10 @@ image. `broken-migration` fails on attempt 1 and is not retried.
 `githooks/pre-push` refuses direct pushes to all three. Enable it once per clone:
 `git config core.hooksPath githooks`.
 
+GitHub refuses them too, whatever the client. A repository ruleset requires a pull request and
+both CI checks on all three branches, and nobody can bypass it (#28). It is enforced only while
+the repository is public (#25).
+
 ## Privacy
 
 This app holds minors' contact details and medical flags. The control that matters is structural:

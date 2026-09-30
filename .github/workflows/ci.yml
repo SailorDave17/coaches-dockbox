@@ -20,6 +20,9 @@ permissions:
 
 jobs:
   checks:
+    # This name is a required status check on develop, release and main, spelled exactly as
+    # here (repository ruleset, #28). A pull request that renames it cannot merge: the check
+    # the ruleset waits for never reports. Rename the check in the ruleset first.
     name: lint, format, types, build
     runs-on: ubuntu-latest
     steps:
@@ -36,6 +39,7 @@ jobs:
       - run: npm run build
 
   db-tests:
+    # Also a required status check by this exact name (#28): see the note on `checks`.
     name: medical access against a local Supabase
     runs-on: ubuntu-latest
     env:
