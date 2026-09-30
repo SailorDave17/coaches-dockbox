@@ -16,3 +16,21 @@
   query latency breaks the <1 s card budget.
 - **Kill condition**: Pro pricing moves past the ceiling, or RLS cannot express "coaches of this
   sailor's program" without a security-definer escape → reopen, Firebase as the runner-up.
+- **Amended 2026-09-29 (owner): Free until real data, then Pro.** Backups and no idle pause protect
+  data, and until a real sailor's record exists there is none. So the organisation starts on the Free
+  plan, in an owner account that still has a free project slot (the main account's two hold Tender and
+  Taskr). The target is unchanged. Pro is a plan on the organisation, so the move is an in-place
+  upgrade: same project, URL, keys and data, with no migration.
+  - **Created 2026-09-29**: organisation "Coach's Dockbox" (Free), project `coachs-dockbox`, ref
+    `oygkxgfjbrvddofifrpk`, East US (North Virginia). No GitHub integration, since an active one
+    blocks transferring the project to HSC. Security options left at their defaults (Data API on,
+    new tables exposed, no automatic-RLS trigger) because the local stack the medical test runs on
+    uses the same defaults and the init migration relies on them. Change both sides together or
+    neither. Empty until the first release deploy applies the migrations (ADR 008).
+  - **Upgrade trigger**: before the first real sailor's record is written (the first roster import),
+    and before the restore rehearsal, which needs Pro anyway. Until then the $25 is $0.
+  - **Until then**: the project pauses after 7 idle days; restore it from the dashboard. There are no
+    backups, so nothing real may be written to it.
+  - **While on Free, invite other logins as Developer, not Owner or Administrator**: the free
+    two-project limit counts every organisation where a login holds those roles, so an Owner invite
+    counts this project against that login's two (`supabase-org-billing-and-firebase-as-alternative`).

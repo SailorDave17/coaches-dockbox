@@ -34,7 +34,7 @@ SMS, and the other two programs.
 
 | Decision | Choice | ADR |
 |---|---|---|
-| Backend | Supabase Pro in its own organisation (Postgres + RLS, Auth, Edge Functions) | [001](docs/adr/001-backend-supabase.md) |
+| Backend | Supabase in its own organisation (Postgres + RLS, Auth, Edge Functions); Free now, Pro before the first real sailor's data | [001](docs/adr/001-backend-supabase.md) |
 | Medical data | One Edge Function is the only path to medical flags; table closed to every client role | [002](docs/adr/002-medical-flags-path.md) |
 | Hosting | Cloudflare Workers static assets | [003](docs/adr/003-hosting-cloudflare-workers.md) |
 | Email | Resend: sign-in links as transactional mail, alerts as broadcasts | [004](docs/adr/004-email-resend-split.md) |
