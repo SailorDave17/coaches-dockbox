@@ -71,9 +71,11 @@ Desktop Chrome 153 on Windows, driven by `playwright-core` with a CDP virtual au
 - **Offline**: with the context offline, the reload was served by the service worker (row 7 passes),
   and every crypto row ran, including a whole seal, reload and open cycle. `navigator.onLine` stayed
   `true` throughout, which is why row 7 reads the network with a request instead.
-- **Wake lock**: headless Chrome refuses it, and Playwright keeps its pages visible, so neither can
-  show the re-acquire. It was measured in Chrome with a throwaway profile, driven over raw CDP. A
-  real tab switch hid the page, Chrome released the lock, and returning re-acquired it
+- **Wake lock**: Playwright keeps its pages visible, so a Playwright run cannot show the re-acquire.
+  Its `grantPermissions` also denies every permission it does not name, the screen wake lock
+  included, which first read as headless Chrome refusing the lock; headless Chrome grants it when
+  nothing was denied. The re-acquire was measured in Chrome with a throwaway profile, driven over raw
+  CDP. A real tab switch hid the page, Chrome released the lock, and returning re-acquired it
   (`reacquiredOnVisibilityChange: 1`).
 - **Links**: both 259 × 72 px at the default desktop viewport, and a tap at each centre reaches the
   link.
