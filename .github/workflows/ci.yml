@@ -10,6 +10,10 @@ on:
         description: 'prove-tests: apply tests/mutations/<name>.sql before the DB tests (expect red)'
         required: false
         default: ''
+      plant:
+        description: 'prove the Start Supabase step: unreachable-registry or broken-migration (expect red)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -53,18 +57,41 @@ jobs:
         # every refused try, including the ones it recovers from, so keying on that word would
         # retry a broken migration too (cairn memory, ghcr-throttle note, 2026-09-26). A
         # `Data limit exceeded` refusal does not clear inside one job: re-run the job instead.
+        # `shell: bash` is load-bearing. It runs this as `bash -eo pipefail`, so the `if` below
+        # tests `supabase start` and not `tee`. Without it the default `bash -e` has no pipefail,
+        # and run 36657679343 went green after every pull failed (#27).
+        shell: bash
+        env:
+          PLANT: ${{ inputs.plant }}
         run: |
+          # A hand-run plant proves this step fails (#27). Each one must turn it red.
+          case "$PLANT" in
+            '') ;;
+            unreachable-registry) export SUPABASE_INTERNAL_IMAGE_REGISTRY=registry.invalid ;;
+            broken-migration) cp tests/plants/broken-migration.sql supabase/migrations/29991231235959_planted_broken_migration.sql ;;
+            *) echo "unknown plant: $PLANT"; exit 1 ;;
+          esac
+          echo "pulling images from $SUPABASE_INTERNAL_IMAGE_REGISTRY"
           for attempt in 1 2 3; do
             if npx supabase start -x "$SUPABASE_EXCLUDE" 2>&1 | tee start.log; then exit 0; fi
             if ! grep -q "failed to pull docker image" start.log; then
               echo "supabase start failed, not on an image pull: not retrying"; exit 1
             fi
-            echo "image pull refused (attempt $attempt of 3); retrying in 30 s"
-            npx supabase stop --no-backup > /dev/null 2>&1 || true
-            sleep 30
+            grep -o "failed to pull docker image[^:]*: [^ ]*" start.log | sed "s/^/attempt $attempt: /" >> failed-pulls.log
+            echo "image pull refused on attempt $attempt of 3"
+            if [ "$attempt" -lt 3 ]; then
+              echo "retrying in 30 s"
+              npx supabase stop --no-backup > /dev/null 2>&1 || true
+              sleep 30
+            fi
           done
-          echo "supabase start: every attempt failed to pull an image"; exit 1
+          echo "supabase start: every attempt failed to pull an image:"
+          cat failed-pulls.log
+          exit 1
       - name: Export the local credentials to later steps
+        # `shell: bash` for pipefail again: a failed `supabase status` fails this step, rather than
+        # piping nothing into GITHUB_ENV and failing later at npm run test:db (#27).
+        shell: bash
         run: npx supabase status -o env | sed 's/"//g' >> "$GITHUB_ENV"
       - name: Apply a prove-tests mutation (hand-run only)
         if: ${{ inputs.mutation != '' }}
