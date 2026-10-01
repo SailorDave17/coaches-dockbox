@@ -65,7 +65,7 @@ The app refuses to start without those two values, on purpose.
 | `npm run lint` | oxlint; a warning fails |
 | `npm run format:check` | Prettier |
 | `npm run typecheck` | `tsc -b` |
-| `npm run test:db` | The medical-access test, the seasons and club-time test, and the API-roles reach guard against a local Supabase |
+| `npm run test:db` | The medical-access, seasons and club-time, and roster-read tests, the API-roles reach guard, and the policy-functions catalog test, against a local Supabase |
 | `npm run probe:build` | The throwaway device probe (#31), not the app: [`spikes/device-probe/`](spikes/device-probe/README.md) |
 
 `test:db` needs a local Supabase (`npx supabase start`, which needs Docker) and its credentials
@@ -74,6 +74,9 @@ security advisors against the same database, failing on any warning (#34). To pr
 fail, run the CI workflow by hand with a `mutation`. With `medical-ignores-program` or
 `anon-select-on-programs`, exactly one case should go red. With `medical-ignores-season-dates`,
 exactly two: the coach whose season ended yesterday and the one whose season starts tomorrow.
+With `roster-ignores-program`, exactly five, all roster reads by a current coach or director, the
+other-program case among them. With `policy-calls-unlisted-definer`, exactly one: the allow-list
+case. Each file names the cases it expects.
 To prove a step fails where it fails, run it by hand with a `plant`:
 `unreachable-registry` fails every pull, so the `Start Supabase` step tries three times and then
 names each refused image. `broken-migration` fails on attempt 1 and is not retried.
@@ -87,6 +90,14 @@ grants what it needs, `service_role` included.
 A membership belongs to a dated season of its program, and medical access lasts only while that
 season is current in club time: `public.club_today()`, the date in America/New_York
 (`supabase/migrations/20261001140000_seasons_with_dates.sql`, #39).
+
+A signed-in coach or director reads the people, memberships, seasons and programs of each program
+in which they coach or direct a current season, limited to its current seasons. No one else reads
+them, and no client writes them or reads `people.auth_user_id`, so a client names its columns rather
+than selecting `*` (`supabase/migrations/20261001160000_roster_reads.sql`, #43). The policies call one
+security-definer helper, `private.my_roster_season_ids()`. That is allowed under ADR 001's kill
+condition as amended by D3, and `tests/db/policy-functions.test.ts` keeps the list of functions any
+policy may call.
 
 ## Branches
 
