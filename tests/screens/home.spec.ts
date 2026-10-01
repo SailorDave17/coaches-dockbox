@@ -9,7 +9,7 @@ test('the home screen scans clean', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
   await page.goto('/')
-  await expect(page.getByRole('heading', { level: 1, name: "Coach's Dockbox" })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: "Coaches' Dockbox" })).toBeVisible()
   await expectScreenClean(page)
   expect(errors).toEqual([])
 })
