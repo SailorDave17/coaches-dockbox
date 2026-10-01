@@ -16,6 +16,8 @@
   query latency breaks the <1 s card budget.
 - **Kill condition**: Pro pricing moves past the ceiling, or RLS cannot express "coaches of this
   sailor's program" without a security-definer escape → reopen, Firebase as the runner-up.
+  *(Read precisely by D3: see "Amended 2026-10-01" below for which definer helpers are not the
+  escape.)*
 - **Amended 2026-09-29 (owner): Free until real data, then Pro.** Backups and no idle pause protect
   data, and until a real sailor's record exists there is none. So the organisation starts on the Free
   plan, in an owner account that still has a free project slot (the main account's two hold Tender and
@@ -129,3 +131,27 @@
         (*measured*, supabase.com/blog/jwt-signing-keys, 2025-07-14), in a way that changes what a
         browser may hold.
       - Failing both, the post-pilot review re-decides it on the pilot's own evidence.
+- **Amended 2026-10-01 (D3, with #43): the kill condition, read precisely.** It lands before the first
+  policy migration (`20261001160000_roster_reads.sql`). A security-definer helper that an RLS policy
+  calls is not the escape the kill condition names when all four of these hold:
+  - it returns only the caller's own facts;
+  - it is `stable`, with `search_path=''`;
+  - execute on it is revoked from `public` and `anon`;
+  - it is tested: a catalog test reads `pg_depend` and `pg_proc.prosecdef`, and fails when a policy
+    calls a function missing from its allow-list, or a definer one that breaks the three conditions
+    above.
+
+  A definer function that returns protected rows, or a definer RPC that is the only guard on a read
+  or a write, **still fires the kill condition.**
+  - **Why a definer is needed at all.** The memberships policy has to ask which seasons the caller
+    coaches, and that is a read of memberships. Run as the caller, the read re-enters memberships'
+    own policy, and Postgres refuses that as infinite recursion. As the tables' owner, the helper
+    reads past the policy.
+  - **As landed in #43**: one helper, `private.my_roster_season_ids()`. It returns the ids of the
+    current seasons of each program in which the caller coaches or directs a current season, and
+    nothing else. It lives in `private`, a schema the Data API does not serve, so the four roster
+    policies reach it by OID with only EXECUTE. A signed-in client that calls it by name is refused
+    with `permission denied for schema private` (*measured* on the local stack, 2026-10-01).
+    `tests/db/policy-functions.test.ts` holds the allow-list.
+  - `public.can_view_medical` is called by no policy, so the allow-list does not cover it. Its
+    placement stays with #61, as recorded above.

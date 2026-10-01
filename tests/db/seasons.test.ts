@@ -1,6 +1,6 @@
 // Seasons and club time (#39). club_today() must give the club's date in America/New_York, whatever
-// the server or session zone and across a DST change. The seasons table must keep RLS on and grant
-// nothing to anon or authenticated until the roster-read story (#43) grants what it needs.
+// the server or session zone and across a DST change. The seasons table must keep RLS on, grant anon
+// nothing, and grant authenticated nothing but the select the roster read (#43) needs.
 //
 // It connects straight to Postgres from DB_URL (`npx supabase status -o env`) as `postgres`, like
 // api-roles-reach.test.ts. With nothing set it fails rather than skipping.
@@ -67,18 +67,19 @@ async function seasonPrivileges(role: string): Promise<string[]> {
   return rows.map((row) => row.privilege)
 }
 
-describe('seasons is closed to clients until the roster-read story (#39, #43)', () => {
+describe('seasons is closed to clients except for the roster read (#39, #43)', () => {
   it('has row level security on', async () => {
     const [row] = await sql<{ rls: boolean }[]>`
       select relrowsecurity as rls from pg_class where oid = 'public.seasons'::regclass`
     expect(row?.rls).toBe(true)
   })
 
-  it('grants anon and authenticated nothing', async () => {
+  // Which columns authenticated may select, and which rows, is roster-reads.test.ts's.
+  it('grants anon nothing, and authenticated only select', async () => {
     expect({
       anon: await seasonPrivileges('anon'),
       authenticated: await seasonPrivileges('authenticated'),
-    }).toEqual({ anon: [], authenticated: [] })
+    }).toEqual({ anon: [], authenticated: ['SELECT'] })
   })
 
   // The positive control: the same query sees what the server side holds.
