@@ -65,14 +65,15 @@ The app refuses to start without those two values, on purpose.
 | `npm run lint` | oxlint; a warning fails |
 | `npm run format:check` | Prettier |
 | `npm run typecheck` | `tsc -b` |
-| `npm run test:db` | The medical-access test and the API-roles reach guard against a local Supabase |
+| `npm run test:db` | The medical-access test, the seasons and club-time test, and the API-roles reach guard against a local Supabase |
 | `npm run probe:build` | The throwaway device probe (#31), not the app: [`spikes/device-probe/`](spikes/device-probe/README.md) |
 
 `test:db` needs a local Supabase (`npx supabase start`, which needs Docker) and its credentials
 exported from `npx supabase status -o env`. CI runs it on every pull request, then runs Supabase's
 security advisors against the same database, failing on any warning (#34). To prove the tests can
 fail, run the CI workflow by hand with a `mutation`. With `medical-ignores-program` or
-`anon-select-on-programs`, exactly one case should go red.
+`anon-select-on-programs`, exactly one case should go red. With `medical-ignores-season-dates`,
+exactly two: the coach whose season ended yesterday and the one whose season starts tomorrow.
 To prove a step fails where it fails, run it by hand with a `plant`:
 `unreachable-registry` fails every pull, so the `Start Supabase` step tries three times and then
 names each refused image. `broken-migration` fails on attempt 1 and is not retried.
@@ -82,6 +83,10 @@ red, and the advisors step names the table and fails.
 New tables and functions in `public` are granted to no API role, and new tables get RLS
 (`supabase/migrations/20261001120000_deny_api_roles_by_default.sql`). A migration that creates one
 grants what it needs, `service_role` included.
+
+A membership belongs to a dated season of its program, and medical access lasts only while that
+season is current in club time: `public.club_today()`, the date in America/New_York
+(`supabase/migrations/20261001140000_seasons_with_dates.sql`, #39).
 
 ## Branches
 
