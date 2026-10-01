@@ -3,7 +3,8 @@
 The owner's decisions taken while the ratified charter was groomed into epics and stories
 (2026-09-29 to 2026-09-30). Story bodies cite them as **D1** to **D33**. **D34** to **D67** were taken
 on 2026-09-30 at the boat-repair forge and at the gates of its groom, and the boat-repair epic's
-stories cite them. They sit beside the charter, not in place of it: where one changes a charter line,
+stories cite them. **D68** to **D71** were taken that night, when ADR 001 was reopened to weigh a
+Spring Boot backend. They sit beside the charter, not in place of it: where one changes a charter line,
 the story that implements it also amends the charter, with a dated note.
 
 "Against the recommendation" marks the decisions where the owner chose differently from what was
@@ -235,3 +236,29 @@ and at the gates of its groom (D39 to D67).
   counts are split by program.
 - **D67 — One "Boat repairs" epic** holds all 30 stories. It is split, not stretched, once it
   passes about 30 stories, the soft cap an epic here is held to.
+
+## Backend re-decision (2026-09-30, night)
+
+Taken when ADR 001 was reopened to ask whether a Java + Spring Boot backend would make the app more
+secure. ADR 001's dated amendment carries the evidence: the priced options, the sources and what
+was rejected.
+
+- **D68 — Supabase stays, hardened now; a Spring API in front of it is the next move.** Hardening
+  closes the one threat Spring changes structurally (a table the Data API exposes because it was
+  created without RLS) for about a day of work, so go-live moves from 2027-04-28 by a day or so at
+  most. The hybrid adds a layer and
+  replaces nothing, so it waits for its trigger in ADR 001, at no cost to what is built meanwhile.
+- **D69 — Opt in to Supabase's 2026-10-30 default-privileges change now, by migration.** The
+  migration revokes the default grants, each table's own migration grants explicitly
+  (`service_role` included), an event trigger enables RLS on every new table, `config.toml` sets
+  `auto_expose_new_tables = false`, and CI runs the security advisors with `--fail-on warn`.
+  Local and hosted match by construction instead of diverging on that date. Lands with the anon
+  reach guard (#34).
+- **D70 — If Spring arrives, Spring checks and RLS still decides.** Each transaction carries the
+  caller's role and claims, and the app never connects as a table owner. Discovery answer 4.2,
+  access enforced in the database, holds. Java-only authorization was rejected because a method
+  nobody annotated is open.
+- **D71 — If Spring arrives, it is a monorepo `api/` folder on a managed always-on host.** There is
+  no OS to patch and one pull request per story. That answers ADR 008's "second deployable" kill
+  condition with a folder. A VPS (about $4 a month cheaper, with OS patching and TLS to run) and a
+  separate repo (two pull requests for any story touching both sides) were rejected.
