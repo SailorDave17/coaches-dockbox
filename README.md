@@ -65,7 +65,7 @@ The app refuses to start without those two values, on purpose.
 | `npm run lint` | oxlint; a warning fails |
 | `npm run format:check` | Prettier |
 | `npm run typecheck` | `tsc -b` |
-| `npm run test:db` | The medical-access, seasons and club-time, and roster-read tests, the API-roles reach guard, and the policy-functions catalog test, against a local Supabase |
+| `npm run test:db` | The medical-access, seasons and club-time, roster-read and guardian-link tests, the API-roles reach guard, and the policy-functions catalog test, against a local Supabase |
 | `npm run probe:build` | The throwaway device probe (#31), not the app: [`spikes/device-probe/`](spikes/device-probe/README.md) |
 
 `test:db` needs a local Supabase (`npx supabase start`, which needs Docker) and its credentials
@@ -74,9 +74,11 @@ security advisors against the same database, failing on any warning (#34). To pr
 fail, run the CI workflow by hand with a `mutation`. With `medical-ignores-program` or
 `anon-select-on-programs`, exactly one case should go red. With `medical-ignores-season-dates`,
 exactly two: the coach whose season ended yesterday and the one whose season starts tomorrow.
-With `roster-ignores-program`, exactly five, all roster reads by a current coach or director, the
-other-program case among them. With `policy-calls-unlisted-definer`, exactly one: the allow-list
-case. Each file names the cases it expects.
+With `roster-ignores-program`, exactly seven, all roster and guardian-link reads by a current coach or
+director, the other-program cases among them. With `policy-calls-unlisted-definer`, exactly one: the
+allow-list case. With `medical-any-guardian-passes`, exactly two: the unlinked guardian and another
+sailor's guardian. With `guardian-read-ignores-unlink`, exactly one: the unlinked guardian's read.
+Each file names the cases it expects.
 To prove a step fails where it fails, run it by hand with a `plant`:
 `unreachable-registry` fails every pull, so the `Start Supabase` step tries three times and then
 names each refused image. `broken-migration` fails on attempt 1 and is not retried.
@@ -93,11 +95,19 @@ season is current in club time: `public.club_today()`, the date in America/New_Y
 
 A signed-in coach or director reads the people, memberships, seasons and programs of each program
 in which they coach or direct a current season, limited to its current seasons. No one else reads
-them, and no client writes them or reads `people.auth_user_id`, so a client names its columns rather
-than selecting `*` (`supabase/migrations/20261001160000_roster_reads.sql`, #43). The policies call one
-security-definer helper, `private.my_roster_season_ids()`. That is allowed under ADR 001's kill
-condition as amended by D3, and `tests/db/policy-functions.test.ts` keeps the list of functions any
-policy may call.
+them except a guardian (below), and no client writes them or reads `people.auth_user_id`, so a client
+names its columns rather than selecting `*` (`supabase/migrations/20261001160000_roster_reads.sql`,
+#43). The policies call one security-definer helper, `private.my_roster_season_ids()`. That is
+allowed under ADR 001's kill condition as amended by D3, and `tests/db/policy-functions.test.ts`
+keeps the list of functions any policy may call.
+
+A guardian is linked to each of their children by a `guardian_links` row, many to many, and an unlink
+keeps the row with `unlinked_at` set. A signed-in guardian reads the `people` rows of the sailors they
+are currently linked to and no one else, and `can_view_medical` lets them through for those sailors
+in any season. At most one current link per sailor is primary. A coach or director reads the current
+links of the sailors on their roster, never `unlinked_at`, and no client writes a link
+(`supabase/migrations/20261001180000_guardian_links.sql`, #53). The people policy calls a second
+definer helper, `private.my_linked_sailor_ids()`.
 
 ## Branches
 

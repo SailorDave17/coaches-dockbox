@@ -33,6 +33,8 @@ type Db = postgres.Sql | postgres.TransactionSql
 const ALLOWED: Record<string, string> = {
   'private.my_roster_season_ids()':
     "Definer, so the memberships policy can read memberships without re-entering itself. Returns only the caller's own scope: the ids of the current seasons of the programs they coach or direct this season (#43).",
+  'private.my_linked_sailor_ids()':
+    "Definer, so the people policy can read the caller's own auth_user_id and their links, neither of which a guardian may select. Returns only the caller's own facts: the ids of the sailors they are currently linked to (#53).",
 }
 
 type PolicyFunction = {

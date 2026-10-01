@@ -8,6 +8,8 @@
 -- Predicted: exactly one red, "refuses a coach of another program". The positive control stays
 -- green (the right coach still passes), the table-revoke case stays green (it does not use the
 -- function), and the lapsed and not-yet-started coaches are still refused by their seasons' dates.
+-- The guardian clause (#53) is carried unchanged, and no guardian holds a coach's membership, so the
+-- guardian cases stay green too.
 -- Any other result means the test is not measuring what it names.
 create or replace function public.can_view_medical(p_sailor uuid)
 returns boolean
@@ -29,5 +31,14 @@ as $$
       on sm.role = 'sailor'
     where viewer.auth_user_id = auth.uid()
       and sm.person_id = p_sailor
+  )
+  or exists (
+    select 1
+    from public.people viewer
+    join public.guardian_links gl
+      on gl.guardian_id = viewer.id
+     and gl.unlinked_at is null
+    where viewer.auth_user_id = auth.uid()
+      and gl.sailor_id = p_sailor
   );
 $$;

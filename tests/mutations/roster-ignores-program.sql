@@ -4,15 +4,19 @@
 -- It drops the program predicate from private.my_roster_season_ids(), so a caller who coaches or
 -- directs any current season reads every program's current seasons, and through them every
 -- program's current people. The caller's own role and season dates still count.
--- Predicted: exactly five red, all in roster-reads.test.ts:
+-- Predicted: exactly seven red. Five are in roster-reads.test.ts:
 -- - "lets an LTS coach read LTS's current members and none of JRT's", the other-program case;
 -- - "lets a JRT coach read JRT's current members and no one else";
 -- - "lets a JRT director read the same as a JRT coach (D46)";
 -- - "reads a JRT coach's memberships without RLS recursion, current seasons only";
 -- - "lets a JRT coach read JRT's current seasons and its program, and no other".
+-- Two are in guardian-links.test.ts (#53), whose coaches read links through memberships' policy:
+-- - "lets a JRT coach read the current links of JRT's sailors, and not an unlinked one or LTS's";
+-- - "lets an LTS coach read LTS's links and none of JRT's".
 -- Last season's coach, the sailor and the treasurer still read no one: they hold no current coach
--- or director membership. The grant and catalog cases, the medical test and the seasons test do not
--- read through the policies. Any other result means the tests are not measuring what they name.
+-- or director membership. Guardians read through their own helper, not this one. The grant and
+-- catalog cases, the medical test and the seasons test do not read through the policies. Any other
+-- result means the tests are not measuring what they name.
 create or replace function private.my_roster_season_ids()
 returns setof uuid
 language sql

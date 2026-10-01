@@ -8,6 +8,10 @@
 // tests/mutations/medical-ignores-season-dates.sql (expected: exactly the "season ended yesterday"
 // and "season starts tomorrow" cases turn red).
 //
+// Since #53 a sailor's currently linked guardians are let through too. Its mutation is
+// tests/mutations/medical-any-guardian-passes.sql (expected: exactly the unlinked-guardian and
+// another-sailor's-guardian cases turn red).
+//
 // It needs a local Supabase (`npx supabase start`, which needs Docker) and its credentials in the
 // environment (`npx supabase status -o env`). With nothing set it fails loudly rather than skipping:
 // a skipped test here would read as a pass.
@@ -46,6 +50,10 @@ const emails = {
   lapsed: `coach-jrt-last-${run}@example.test`,
   upcoming: `coach-jrt-next-${run}@example.test`,
   oneDay: `coach-jrt-regatta-${run}@example.test`,
+  // Guardians hold no membership, so only their links can let them through.
+  guardian: `guardian-${run}@example.test`,
+  unlinkedGuardian: `guardian-unlinked-${run}@example.test`,
+  otherGuardian: `guardian-other-${run}@example.test`,
 }
 let sailorId = ''
 let today = ''
@@ -120,6 +128,27 @@ beforeAll(async () => {
       season_id: seasonId,
     })
   }
+  // Maya's current guardian, Maya's unlinked guardian, and the current guardian of another sailor.
+  const otherSailorId = idOf(await insertOne('people', { first_name: 'Eli', last_name: run }))
+  const guardians: Array<[string, string, string | null]> = [
+    [emails.guardian, sailorId, null],
+    [emails.unlinkedGuardian, sailorId, new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()],
+    [emails.otherGuardian, otherSailorId, null],
+  ]
+  for (const [email, linkedSailorId, unlinkedAt] of guardians) {
+    const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true })
+    if (error) throw new Error(`create user ${email}: ${error.message}`)
+    const guardianId = idOf(
+      await insertOne('people', { auth_user_id: data.user.id, first_name: 'Guardian', last_name: run }),
+    )
+    const { error: linkError } = await admin.from('guardian_links').insert({
+      guardian_id: guardianId,
+      sailor_id: linkedSailorId,
+      unlinked_at: unlinkedAt,
+    })
+    if (linkError) throw new Error(`link ${email}: ${linkError.message}`)
+  }
+
   await insertOne('medical_flags', {
     sailor_id: sailorId,
     flags: ['Carries EpiPen'],
@@ -176,5 +205,31 @@ describe('medical card access ends with the season (#39)', () => {
     expect(await clubDay(0), 'the club date turned over during the test: run it again').toBe(today)
     expect(error).toBeNull()
     expect(data).toBe(true)
+  })
+})
+
+// Each guardian holds no membership, so the coach clause can admit none of them, and only their link
+// decides. The unlinked guardian's link is Maya's, like the current guardian's, and differs only in
+// being unlinked. The other guardian's link is current, and differs only in being another sailor's.
+describe("medical card access for a sailor's own guardians (#53)", () => {
+  it('lets a currently linked guardian through', async () => {
+    const guardian = await signedIn(emails.guardian)
+    const { data, error } = await guardian.rpc('can_view_medical', { p_sailor: sailorId })
+    expect(error).toBeNull()
+    expect(data).toBe(true)
+  })
+
+  it('refuses a guardian whose link to the sailor was unlinked', async () => {
+    const guardian = await signedIn(emails.unlinkedGuardian)
+    const { data, error } = await guardian.rpc('can_view_medical', { p_sailor: sailorId })
+    expect(error).toBeNull()
+    expect(data).toBe(false)
+  })
+
+  it("refuses another sailor's guardian", async () => {
+    const guardian = await signedIn(emails.otherGuardian)
+    const { data, error } = await guardian.rpc('can_view_medical', { p_sailor: sailorId })
+    expect(error).toBeNull()
+    expect(data).toBe(false)
   })
 })
