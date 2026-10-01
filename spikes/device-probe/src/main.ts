@@ -690,7 +690,7 @@ function report(): Detail {
     navigator as Navigator & { userAgentData?: { brands: unknown; mobile: boolean; platform: string } }
   ).userAgentData
   return {
-    probe: 'coachs-dockbox spikes/device-probe (#31)',
+    probe: 'coaches-dockbox spikes/device-probe (#31)',
     builtAt: __PROBE_BUILT_AT__,
     reportedAt: new Date().toISOString(),
     loadNumber: LOAD_NUMBER,

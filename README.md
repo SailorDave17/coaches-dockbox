@@ -1,4 +1,4 @@
-# Coach's Dockbox
+# Coaches' Dockbox
 
 One app for Hoover Sailing Club's three programs — COHSSA high school sailing, the Hoover Junior
 Race Team (JRT) and Hoover Learn to Sail — replacing the pile of apps, sheets and paper that coaches,

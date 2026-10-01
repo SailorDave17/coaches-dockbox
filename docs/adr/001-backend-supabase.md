@@ -21,7 +21,7 @@
   plan, in an owner account that still has a free project slot (the main account's two hold Tender and
   Taskr). The target is unchanged. Pro is a plan on the organisation, so the move is an in-place
   upgrade: same project, URL, keys and data, with no migration.
-  - **Created 2026-09-29**: organisation "Coach's Dockbox" (Free), project `coachs-dockbox`, ref
+  - **Created 2026-09-29**: organisation "Coaches' Dockbox" (Free), project `coaches-dockbox`, ref
     `oygkxgfjbrvddofifrpk`, East US (North Virginia). No GitHub integration, since an active one
     blocks transferring the project to HSC. Security options left at their defaults (Data API on,
     new tables exposed, no automatic-RLS trigger) because the local stack the medical test runs on

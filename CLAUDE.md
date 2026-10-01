@@ -1,4 +1,4 @@
-# Coach's Dockbox
+# Coaches' Dockbox
 
 Read [`docs/charter.md`](docs/charter.md) before changing anything. It is the document of record:
 the problem, the pilot scope, the non-goals, the design bar, and one ADR per technology decision in

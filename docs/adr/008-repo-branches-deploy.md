@@ -1,4 +1,4 @@
-# ADR 008 — New repo `coachs-dockbox`; develop / release / main; auto-deploy on release
+# ADR 008 — New repo `coaches-dockbox`; develop / release / main; auto-deploy on release
 - Status: accepted 2026-09-29 (charter ratified) · Phases 6, 8
 - **Context**: cohssa-attendance's Sheet architecture and names-only policy cannot carry this.
 - **Options**: **new repo** (clean; salvage copied in); **evolve cohssa-attendance** (keeps history, but
