@@ -1,8 +1,9 @@
 // Roster reads follow program and season (#43). A signed-in coach or director reads the people,
 // memberships, seasons and programs of each program in which they coach or direct a current season,
 // limited to that program's current seasons. A coach of another program, last season's coach, and a
-// sailor or treasurer of the same program read nothing (D46). No client writes any of it, and no
-// client reads or writes people.auth_user_id.
+// sailor or treasurer of the same program read nothing (D46), but their own people row, which every
+// signed-in person reads since #52. No client writes any of it, and no client reads or writes
+// people.auth_user_id.
 //
 // Its prove-tests mutation is tests/mutations/roster-ignores-program.sql, applied in CI by running
 // the workflow by hand with `mutation: roster-ignores-program`. That file names the cases it is
@@ -178,19 +179,20 @@ describe('roster reads follow program and current season (#43)', () => {
     expect(await peopleSeenBy('Dana')).toEqual(JRT_NOW)
   })
 
-  it("lets last season's JRT coach, with no current membership, read no one", async () => {
-    expect(await peopleSeenBy('Pat')).toEqual([])
+  // Since #52 every signed-in person reads their own row, so "no one else" is the refusal.
+  it("lets last season's JRT coach, with no current membership, read no one but themselves", async () => {
+    expect(await peopleSeenBy('Pat')).toEqual(['Pat'])
     expect(await clubDay(0), 'the club date turned over during the test: run it again').toBe(today)
   })
 
   // Pat's season ended yesterday, so the refusal above rests on the dates. These two rest on the role:
   // each holds a current JRT Spring membership, the same as Jordan's.
-  it('lets a JRT sailor who signs in read no one: roster reads are keyed on role (D46)', async () => {
-    expect(await peopleSeenBy('Sam')).toEqual([])
+  it('lets a JRT sailor who signs in read no one but themselves: roster reads are keyed on role (D46)', async () => {
+    expect(await peopleSeenBy('Sam')).toEqual(['Sam'])
   })
 
-  it('lets a JRT treasurer read no one (D46)', async () => {
-    expect(await peopleSeenBy('Terry')).toEqual([])
+  it('lets a JRT treasurer read no one but themselves (D46)', async () => {
+    expect(await peopleSeenBy('Terry')).toEqual(['Terry'])
   })
 
   // The memberships policy calls a function that reads memberships. Run as the caller, that read

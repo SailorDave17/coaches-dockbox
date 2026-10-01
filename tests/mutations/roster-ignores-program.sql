@@ -13,8 +13,9 @@
 -- Two are in guardian-links.test.ts (#53), whose coaches read links through memberships' policy:
 -- - "lets a JRT coach read the current links of JRT's sailors, and not an unlinked one or LTS's";
 -- - "lets an LTS coach read LTS's links and none of JRT's".
--- Last season's coach, the sailor and the treasurer still read no one: they hold no current coach
--- or director membership. Guardians read through their own helper, not this one. The grant and
+-- Last season's coach, the sailor and the treasurer still read no one but themselves: they hold no
+-- current coach or director membership. sign-in.test.ts asserts only that its coach's roster
+-- includes its own rows, so it stays green. Guardians read through their own helper, not this one. The grant and
 -- catalog cases, the medical test and the seasons test do not read through the policies. Any other
 -- result means the tests are not measuring what they name.
 create or replace function private.my_roster_season_ids()

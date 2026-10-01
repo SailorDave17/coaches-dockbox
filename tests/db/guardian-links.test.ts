@@ -1,9 +1,10 @@
 // Guardians read only their own children (#53). A guardian is one people row with a guardian_links row
 // per child, so a guardian of two sailors carries both links, and a sailor in a split household has a
 // link per guardian. A signed-in guardian reads the people rows of the sailors they are currently linked
-// to and no one else; an unlinked guardian reads no one. At most one current link per sailor is
-// primary. A coach or director reads the current links of the sailors on their roster, and no client
-// reads unlinked_at or writes a link. Medical access for guardians is tested in medical-access.test.ts.
+// to and no one else but themselves (#52); an unlinked guardian reads only themselves. At most one
+// current link per sailor is primary. A coach or director reads the current links of the sailors on
+// their roster, and no client reads unlinked_at or writes a link. Medical access for guardians is
+// tested in medical-access.test.ts.
 //
 // Its prove-tests mutation is tests/mutations/guardian-read-ignores-unlink.sql, applied in CI by running
 // the workflow by hand with `mutation: guardian-read-ignores-unlink`. That file names the case it is
@@ -196,19 +197,20 @@ beforeAll(async () => {
   }
 })
 
+// Since #52 every signed-in person also reads their own row, so each guardian below sees themselves.
 describe('a guardian reads only their own children (#53)', () => {
   // The positive control: without it, a policy that returned nothing would pass the refusals below.
   it("lets a guardian read their one child, and no other sailor or guardian, Sky's other guardian included", async () => {
-    expect(await peopleSeenBy('Fran')).toEqual(['Sky'])
+    expect(await peopleSeenBy('Fran')).toEqual(['Fran', 'Sky'])
   })
 
   it("lets another family's guardian read their own child and none of Sky's household", async () => {
-    expect(await peopleSeenBy('Hugo')).toEqual(['Theo'])
+    expect(await peopleSeenBy('Hugo')).toEqual(['Hugo', 'Theo'])
   })
 
   // Uma's link is Sky's, like Fran's, and differs only in being unlinked.
-  it('lets a guardian whose link was unlinked read no one', async () => {
-    expect(await peopleSeenBy('Uma')).toEqual([])
+  it('lets a guardian whose link was unlinked read no one but themselves', async () => {
+    expect(await peopleSeenBy('Uma')).toEqual(['Uma'])
   })
 
   it('gives a guardian no read of guardian_links, their own links included', async () => {
@@ -225,7 +227,7 @@ describe('a guardian of two sailors is one person with two links, and a sailor h
     const links = await sql<Link[]>`
       select guardian_id, sailor_id, is_primary from public.guardian_links where guardian_id = ${gina}`
     expect(links.map(describeLink).sort()).toEqual(['Gina -> Remy (primary)', 'Gina -> Sky (primary)'])
-    expect(await peopleSeenBy('Gina')).toEqual(['Remy', 'Sky'])
+    expect(await peopleSeenBy('Gina')).toEqual(['Gina', 'Remy', 'Sky'])
   })
 
   // Checked on the rows as well as on the error, so a refusal of some other step cannot pass for this one.

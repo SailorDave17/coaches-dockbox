@@ -31,3 +31,60 @@ body {
   margin: 0 auto;
   padding: 24px 16px;
 }
+
+/* Controls (#52). Every one is at least 56 px both ways, the dock's one-thumb size (tests/a11y/screen.ts).
+   Scoped to .shell: the helper's own controls load this file, and a bare `button` rule would resize
+   the targets they plant. */
+.shell label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.shell input[type='email'] {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 56px;
+  padding: 0 16px;
+  font: inherit;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px solid var(--navy);
+  border-radius: 8px;
+}
+
+/* Cyan carries dark ink, never white (charter). */
+.shell button {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-height: 56px;
+  margin-top: 16px;
+  padding: 0 16px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--cyan);
+  border: 2px solid var(--cyan-deep);
+  border-radius: 8px;
+}
+
+.shell button.secondary {
+  color: var(--navy-deep);
+  background: var(--paper);
+  border-color: var(--navy);
+}
+
+.shell button:disabled {
+  cursor: progress;
+}
+
+.shell :focus-visible {
+  outline: 3px solid var(--navy-deep);
+  outline-offset: 3px;
+}
+
+/* A heading takes focus only so the next Tab starts from it (screens.tsx). */
+.shell h2[tabindex='-1']:focus {
+  outline: none;
+}

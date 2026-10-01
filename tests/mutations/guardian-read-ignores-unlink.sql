@@ -3,7 +3,7 @@
 --
 -- It drops the current-link condition from private.my_linked_sailor_ids(), so a guardian keeps reading
 -- a sailor's people row after their link is unlinked. The guardian match stays.
--- Predicted: exactly one red, "lets a guardian whose link was unlinked read no one" in
+-- Predicted: exactly one red, "lets a guardian whose link was unlinked read no one but themselves" in
 -- guardian-links.test.ts. The current guardians read the same children as before, the coaches' link
 -- reads go through their own policy, and can_view_medical does not call this function. Any other
 -- result means the test is not measuring what it names.
