@@ -65,10 +65,20 @@ The app refuses to start without those two values, on purpose.
 | `npm run lint` | oxlint; a warning fails |
 | `npm run format:check` | Prettier |
 | `npm run typecheck` | `tsc -b` |
-| `npm run test:db` | The medical-access, seasons and club-time, roster-read, guardian-link and sign-in tests, the API-roles reach guard, and the policy-functions catalog test, against a local Supabase |
+| `npm run test:db` | The medical-access, seasons and club-time, roster-read, guardian-link and sign-in tests, the API-roles reach guard, the policy-functions catalog test, and the heartbeat Edge Function through the gateway, against a local Supabase |
 | `npm run test:unit` | The glare token test: every colour token classified, every text-on-background pair the stylesheets declare held to the glare contrast. Also the sign-in decisions, with a fake auth client, and local Auth's settings in `supabase/config.toml` |
 | `npm run test:screens` | Every screen through the accessibility helper, in Chromium against the built app. Run `npm run build` first |
+| `npm run lint:functions` | `deno lint` over the Edge Functions in `supabase/functions/` |
+| `npm run typecheck:functions` | `deno check` over the same, strict like the app |
+| `npm run test:functions` | `deno test`: the functions' env loader fails at boot, naming each missing variable |
 | `npm run probe:build` | The throwaway device probe (#31), not the app: [`spikes/device-probe/`](spikes/device-probe/README.md) |
+
+The Edge Functions are Deno, which `tsc -b` and Vitest do not cover. Deno comes from the
+`deno` dev dependency, so the three `:functions` scripts need nothing installed beyond `npm install`.
+Every function loads its env at module scope through `supabase/functions/_shared/env.ts` (ADR 011),
+so a missing secret fails the function at boot, not at its first request. After editing a function,
+restart the local edge runtime (`docker restart supabase_edge_runtime_coaches-dockbox`): it serves a
+copy compiled at start, so an edit does not reach it until then.
 
 `test:db` needs a local Supabase (`npx supabase start`, which needs Docker) and its credentials
 exported from `npx supabase status -o env`. CI runs it on every pull request, then runs Supabase's
