@@ -65,8 +65,8 @@ The app refuses to start without those two values, on purpose.
 | `npm run lint` | oxlint; a warning fails |
 | `npm run format:check` | Prettier |
 | `npm run typecheck` | `tsc -b` |
-| `npm run test:db` | The medical-access, seasons and club-time, roster-read and guardian-link tests, the API-roles reach guard, and the policy-functions catalog test, against a local Supabase |
-| `npm run test:unit` | The glare token test: every colour token classified, every text-on-background pair the stylesheets declare held to the glare contrast |
+| `npm run test:db` | The medical-access, seasons and club-time, roster-read, guardian-link and sign-in tests, the API-roles reach guard, and the policy-functions catalog test, against a local Supabase |
+| `npm run test:unit` | The glare token test: every colour token classified, every text-on-background pair the stylesheets declare held to the glare contrast. Also the sign-in decisions, with a fake auth client, and local Auth's settings in `supabase/config.toml` |
 | `npm run test:screens` | Every screen through the accessibility helper, in Chromium against the built app. Run `npm run build` first |
 | `npm run probe:build` | The throwaway device probe (#31), not the app: [`spikes/device-probe/`](spikes/device-probe/README.md) |
 
@@ -80,6 +80,7 @@ With `roster-ignores-program`, exactly seven, all roster and guardian-link reads
 director, the other-program cases among them. With `policy-calls-unlisted-definer`, exactly one: the
 allow-list case. With `medical-any-guardian-passes`, exactly two: the unlinked guardian and another
 sailor's guardian. With `guardian-read-ignores-unlink`, exactly one: the unlinked guardian's read.
+With `me-ignores-caller`, exactly three: each sign-in case that reads its own name from `public.me`.
 Each file names the cases it expects.
 To prove a step fails where it fails, run it by hand with a `plant`:
 `unreachable-registry` fails every pull, so the `Start Supabase` step tries three times and then
@@ -108,7 +109,7 @@ season is current in club time: `public.club_today()`, the date in America/New_Y
 
 A signed-in coach or director reads the people, memberships, seasons and programs of each program
 in which they coach or direct a current season, limited to its current seasons. No one else reads
-them except a guardian (below), and no client writes them or reads `people.auth_user_id`, so a client
+them except a guardian (below) and each person's own row (sign-in, below), and no client writes them or reads `people.auth_user_id`, so a client
 names its columns rather than selecting `*` (`supabase/migrations/20261001160000_roster_reads.sql`,
 #43). The policies call one security-definer helper, `private.my_roster_season_ids()`. That is
 allowed under ADR 001's kill condition as amended by D3, and `tests/db/policy-functions.test.ts`
@@ -116,11 +117,27 @@ keeps the list of functions any policy may call.
 
 A guardian is linked to each of their children by a `guardian_links` row, many to many, and an unlink
 keeps the row with `unlinked_at` set. A signed-in guardian reads the `people` rows of the sailors they
-are currently linked to and no one else, and `can_view_medical` lets them through for those sailors
+are currently linked to and no one else but themselves, and `can_view_medical` lets them through for those sailors
 in any season. At most one current link per sailor is primary. A coach or director reads the current
 links of the sailors on their roster, never `unlinked_at`, and no client writes a link
 (`supabase/migrations/20261001180000_guardian_links.sql`, #53). The people policy calls a second
 definer helper, `private.my_linked_sailor_ids()`.
+
+Sign-in is by emailed link (#52). Sign-ups are off (D15), so the app asks for a link with
+`shouldCreateUser: false`, and the screen says "Check your email" whatever address was entered: an
+address with no account is refused by the server, and saying so would tell anyone which addresses
+have one. Every signed-in person reads their own `people` row, and `public.me`, an invoker view,
+returns that row and nothing else, which is how the app says "Signed in as" a first name or "You're
+not on a Dockbox roster yet" (`supabase/migrations/20261001200000_read_own_person.sql`, through a
+third helper, `private.my_person_id()`). Sign out ends this device's session only, and runs the
+sign-out hooks first (`onSignOut` in `src/auth/session.ts`), which is where the card cache wipes.
+
+To sign in locally, start the local Supabase, put its `API_URL` and `ANON_KEY` in `.env.local`, and
+run `npm run dev`, which serves on `http://localhost:5173`, the one origin local Auth sends links back
+to. A person needs an account and a linked `people` row first, made with the secret key: Auth's
+admin `createUser` with `email_confirm: true`, then a `people` row with its `auth_user_id`. The
+emailed link lands in the local mailbox (`INBUCKET_URL` in `npx supabase status`). Admin
+`generateLink` makes one without sending mail.
 
 ## Branches
 

@@ -35,6 +35,8 @@ const ALLOWED: Record<string, string> = {
     "Definer, so the memberships policy can read memberships without re-entering itself. Returns only the caller's own scope: the ids of the current seasons of the programs they coach or direct this season (#43).",
   'private.my_linked_sailor_ids()':
     "Definer, so the people policy can read the caller's own auth_user_id and their links, neither of which a guardian may select. Returns only the caller's own facts: the ids of the sailors they are currently linked to (#53).",
+  'private.my_person_id()':
+    "Definer, so the people policy and public.me can read the caller's own auth_user_id, which no client may select. Returns only the caller's own fact: the id of the person their session is linked to (#52).",
 }
 
 type PolicyFunction = {
