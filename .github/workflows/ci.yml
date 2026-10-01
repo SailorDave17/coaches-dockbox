@@ -40,6 +40,11 @@ jobs:
       - run: npm run format:check
       - run: npm run typecheck
       - run: npm run test:unit
+      # The Edge Functions are Deno, which tsc and Vitest do not cover (#35). Deno comes from the
+      # `deno` dev dependency, so these run after npm ci with no extra action.
+      - run: npm run lint:functions
+      - run: npm run typecheck:functions
+      - run: npm run test:functions
       - run: npm run build
         env:
           # Placeholders, and public ones: config.ts stops the app at load without these two, and
@@ -58,9 +63,10 @@ jobs:
       # ghcr.io throttled `supabase start` pulls in this workspace on 2026-09-23 and a token
       # docker login did not lift it; this registry did (cairn memory, ghcr-throttle note).
       SUPABASE_INTERNAL_IMAGE_REGISTRY: public.ecr.aws
-      # Start only what the test uses: postgres (always), gotrue, postgrest and kong. On this
+      # Start only what the test uses: postgres (always), gotrue, postgrest, kong and edge-runtime,
+      # which serves supabase/functions behind kong for tests/db/heartbeat.test.ts (#35). On this
       # repo's first push ECR refused `storage-api` and `studio`, two images the test never needs.
-      SUPABASE_EXCLUDE: realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+      SUPABASE_EXCLUDE: realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,logflare,vector,supavisor
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0

@@ -17,6 +17,9 @@
     "test:db": "vitest run --project db",
     "test:unit": "vitest run --project unit",
     "test:screens": "playwright test",
+    "lint:functions": "deno lint supabase/functions",
+    "typecheck:functions": "deno check supabase/functions",
+    "test:functions": "deno test --allow-env=DOCKBOX_TEST_URL,DOCKBOX_TEST_KEY,DOCKBOX_TEST_TOKEN --allow-read=supabase/functions supabase/functions",
     "probe:dev": "vite --config spikes/device-probe/vite.config.ts",
     "probe:build": "tsc -b spikes/device-probe && vite build --config spikes/device-probe/vite.config.ts",
     "probe:preview": "vite preview --config spikes/device-probe/vite.config.ts"
@@ -33,6 +36,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
+    "deno": "^2.9.6",
     "oxlint": "^1.81.0",
     "postcss": "^8.5.28",
     "postgres": "^3.4.9",
