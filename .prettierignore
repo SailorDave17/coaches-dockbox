@@ -2,6 +2,8 @@ dist
 node_modules
 package-lock.json
 supabase/.temp
+test-results
+playwright-report
 # Documents of record are prose with deliberate line breaks; they are not reformatted.
 docs
 *.md

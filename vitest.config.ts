@@ -13,6 +13,14 @@ export default defineConfig({
           hookTimeout: 60_000,
         },
       },
+      {
+        test: {
+          // Plain Node, no database and no browser: the glare token test (#36).
+          name: 'unit',
+          include: ['tests/unit/**/*.test.ts'],
+          environment: 'node',
+        },
+      },
     ],
   },
 })

@@ -1,0 +1,19 @@
+<!doctype html>
+<!--
+  #36 control: --red text on --paper. axe passes it at 5.38:1, over WCAG's 4.5:1, and the glare rule
+  (D23) fails it, under 7:1. Only the helper's glare layer can red it. The rule sets no background,
+  so the static token test cannot see the pair either.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fixture: red text on paper</title>
+  </head>
+  <body>
+    <main>
+      <h1>Fixture</h1>
+      <p class="late" style="color: var(--red)">Late</p>
+    </main>
+  </body>
+</html>

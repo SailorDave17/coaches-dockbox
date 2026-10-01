@@ -1,0 +1,22 @@
+<!doctype html>
+<!--
+  #36 control: two touching 20 px buttons. axe's WCAG 2.2 target-size rule fails both, but only when
+  the wcag22aa tag is asked for. A lone small button passes it on the spacing exception, so the pair
+  is what proves the tag (cairn memory, axe-core-in-a-test-suite).
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fixture: two touching 20 px buttons</title>
+  </head>
+  <body>
+    <main>
+      <h1>Fixture</h1>
+      <div style="display: flex">
+        <button type="button" style="width: 20px; height: 20px; padding: 0; margin: 0; border: 0">A</button>
+        <button type="button" style="width: 20px; height: 20px; padding: 0; margin: 0; border: 0">B</button>
+      </div>
+    </main>
+  </body>
+</html>

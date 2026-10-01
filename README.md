@@ -66,6 +66,8 @@ The app refuses to start without those two values, on purpose.
 | `npm run format:check` | Prettier |
 | `npm run typecheck` | `tsc -b` |
 | `npm run test:db` | The medical-access, seasons and club-time, roster-read and guardian-link tests, the API-roles reach guard, and the policy-functions catalog test, against a local Supabase |
+| `npm run test:unit` | The glare token test: every colour token classified, every text-on-background pair the stylesheets declare held to the glare contrast |
+| `npm run test:screens` | Every screen through the accessibility helper, in Chromium against the built app. Run `npm run build` first |
 | `npm run probe:build` | The throwaway device probe (#31), not the app: [`spikes/device-probe/`](spikes/device-probe/README.md) |
 
 `test:db` needs a local Supabase (`npx supabase start`, which needs Docker) and its credentials
@@ -84,6 +86,17 @@ To prove a step fails where it fails, run it by hand with a `plant`:
 names each refused image. `broken-migration` fails on attempt 1 and is not retried.
 `table-without-rls` adds a table with RLS off that signed-in clients can read: exactly one test goes
 red, and the advisors step names the table and fails.
+
+Every screen test calls `expectScreenClean(page)` from `tests/a11y/screen.ts` (#36). It fails on any
+axe-core WCAG 2.2 A or AA violation, on any visible interactive element under 56 by 56 CSS px, and on
+any text axe measured that misses the owner's glare contrast (D23): 7:1 on paper and pale
+backgrounds, 4.5:1 on a brand-coloured control, and `--cyan` always carries `--ink`. `test:unit`
+holds the same rule over the pairs the stylesheets declare, and refuses a new colour token until
+`tests/a11y/glare.ts` says which bar it is held to. CI's checks job runs both, building with
+placeholder public values. Locally, install the browser once with
+`npx playwright install --only-shell chromium`. The helper's own controls are
+`tests/screens/a11y-helper.spec.ts`: each fixture in `tests/a11y/fixtures/` plants one defect, and
+the helper must report exactly that defect.
 
 New tables and functions in `public` are granted to no API role, and new tables get RLS
 (`supabase/migrations/20261001120000_deny_api_roles_by_default.sql`). A migration that creates one
