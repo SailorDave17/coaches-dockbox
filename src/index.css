@@ -1,4 +1,5 @@
 /* Brand palette sampled from the COHSSA burgee (cohssa-attendance). Glare rule: cyan carries dark ink, never white. */
+/* Every colour token here is classified pale, control or text in tests/a11y/glare.ts, and the token test fails on one that is not (#36). */
 :root {
   --cyan: #00aeef;
   --cyan-deep: #0077a8;

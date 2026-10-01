@@ -1,0 +1,5 @@
+/* #36 fixture: white text on --cyan. The token test must refuse it twice: under 4.5:1, and not --ink. */
+.fixture-cta {
+  background: var(--cyan);
+  color: #fff;
+}

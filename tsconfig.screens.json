@@ -1,12 +1,12 @@
 {
   "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.screens.tsbuildinfo",
     "target": "es2023",
-    "lib": ["ES2023"],
+    /* DOM: the screen helper runs functions in the page (#36). The Node-only tests stay without it. */
+    "lib": ["ES2023", "DOM"],
     "types": ["node"],
     "skipLibCheck": true,
 
-    /* Bundler mode */
     "module": "nodenext",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
@@ -23,7 +23,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts", "vitest.config.ts", "tests"],
-  /* The screen tests and their helper run code in the page, so they need DOM: tsconfig.screens.json. */
-  "exclude": ["tests/screens", "tests/a11y/screen.ts"]
+  "include": ["playwright.config.ts", "tests/screens", "tests/a11y"]
 }

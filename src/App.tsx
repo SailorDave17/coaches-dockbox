@@ -3,7 +3,7 @@
 export default function App() {
   return (
     <main className="shell">
-      <h1>Coach&apos;s Dockbox</h1>
+      <h1>Coaches&apos; Dockbox</h1>
       <p>Hoover Sailing Club. The Junior Race Team pilot starts spring 2027.</p>
     </main>
   )

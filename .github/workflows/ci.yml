@@ -36,7 +36,16 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
       - run: npm run typecheck
+      - run: npm run test:unit
       - run: npm run build
+        env:
+          # Placeholders, and public ones: config.ts stops the app at load without these two, and
+          # the screen tests below scan what the built app renders. Nothing deploys this build.
+          VITE_SUPABASE_URL: http://127.0.0.1:54321
+          VITE_SUPABASE_ANON_KEY: ci-placeholder-not-a-key
+      # Chromium's headless shell, which is what the screen tests run (#36).
+      - run: npx playwright install --with-deps --only-shell chromium
+      - run: npm run test:screens
 
   db-tests:
     # Also a required status check by this exact name (#28): see the note on `checks`.
