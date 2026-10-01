@@ -11,7 +11,7 @@ on:
         required: false
         default: ''
       plant:
-        description: 'prove the Start Supabase step: unreachable-registry or broken-migration (expect red)'
+        description: 'prove a step fails: unreachable-registry or broken-migration (Start Supabase), table-without-rls (advisors) (expect red)'
         required: false
         default: ''
 
@@ -73,6 +73,7 @@ jobs:
             '') ;;
             unreachable-registry) export SUPABASE_INTERNAL_IMAGE_REGISTRY=registry.invalid ;;
             broken-migration) cp tests/plants/broken-migration.sql supabase/migrations/29991231235959_planted_broken_migration.sql ;;
+            table-without-rls) cp tests/plants/table-without-rls.sql supabase/migrations/29991231235959_planted_table_without_rls.sql ;;
             *) echo "unknown plant: $PLANT"; exit 1 ;;
           esac
           echo "pulling images from $SUPABASE_INTERNAL_IMAGE_REGISTRY"
@@ -93,6 +94,7 @@ jobs:
           cat failed-pulls.log
           exit 1
       - name: Export the local credentials to later steps
+        id: credentials
         # `shell: bash` for pipefail again: a failed `supabase status` fails this step, rather than
         # piping nothing into GITHUB_ENV and failing later at npm run test:db (#27).
         shell: bash
@@ -105,3 +107,11 @@ jobs:
           [[ "$MUTATION" =~ ^[a-z0-9-]+$ ]] || { echo "mutation name must be kebab-case"; exit 1; }
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "tests/mutations/${MUTATION}.sql"
       - run: npm run test:db
+      - name: Security advisors
+        # Supabase's own security lints against the local database, beside the catalog test (#34,
+        # D69). `--fail-on` defaults to `none`, which never fails a build, so it is set. `warn` is
+        # the level because "RLS enabled, no policy" is INFO and fires on every deny-by-design
+        # table. It runs after a red test too, so the `table-without-rls` plant shows both
+        # instruments catching the same table.
+        if: ${{ !cancelled() && steps.credentials.outcome == 'success' }}
+        run: npx supabase db advisors --local --type security --fail-on warn

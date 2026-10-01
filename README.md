@@ -65,15 +65,23 @@ The app refuses to start without those two values, on purpose.
 | `npm run lint` | oxlint; a warning fails |
 | `npm run format:check` | Prettier |
 | `npm run typecheck` | `tsc -b` |
-| `npm run test:db` | The medical-access test against a local Supabase |
+| `npm run test:db` | The medical-access test and the API-roles reach guard against a local Supabase |
 | `npm run probe:build` | The throwaway device probe (#31), not the app: [`spikes/device-probe/`](spikes/device-probe/README.md) |
 
 `test:db` needs a local Supabase (`npx supabase start`, which needs Docker) and its credentials
-exported from `npx supabase status -o env`. CI runs it on every pull request. To prove it can fail,
-run the CI workflow by hand with `mutation: medical-ignores-program`: exactly one case should go red.
-To prove the `Start Supabase` step fails where it fails, run it by hand with a `plant`:
-`unreachable-registry` fails every pull, so the step tries three times and then names each refused
-image. `broken-migration` fails on attempt 1 and is not retried.
+exported from `npx supabase status -o env`. CI runs it on every pull request, then runs Supabase's
+security advisors against the same database, failing on any warning (#34). To prove the tests can
+fail, run the CI workflow by hand with a `mutation`. With `medical-ignores-program` or
+`anon-select-on-programs`, exactly one case should go red.
+To prove a step fails where it fails, run it by hand with a `plant`:
+`unreachable-registry` fails every pull, so the `Start Supabase` step tries three times and then
+names each refused image. `broken-migration` fails on attempt 1 and is not retried.
+`table-without-rls` adds a table with RLS off that signed-in clients can read: exactly one test goes
+red, and the advisors step names the table and fails.
+
+New tables and functions in `public` are granted to no API role, and new tables get RLS
+(`supabase/migrations/20261001120000_deny_api_roles_by_default.sql`). A migration that creates one
+grants what it needs, `service_role` included.
 
 ## Branches
 
