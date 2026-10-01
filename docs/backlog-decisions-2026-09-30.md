@@ -1,9 +1,10 @@
 # Backlog decisions — 2026-09-30
 
 The owner's decisions taken while the ratified charter was groomed into epics and stories
-(2026-09-29 to 2026-09-30). Story bodies cite them as **D1** to **D33**. They sit beside the charter,
-not in place of it: where one changes a charter line, the story that implements it also amends the
-charter, with a dated note.
+(2026-09-29 to 2026-09-30). Story bodies cite them as **D1** to **D33**. **D34** to **D67** were taken
+on 2026-09-30 at the boat-repair forge and at the gates of its groom, and the boat-repair epic's
+stories cite them. They sit beside the charter, not in place of it: where one changes a charter line,
+the story that implements it also amends the charter, with a dated note.
 
 "Against the recommendation" marks the decisions where the owner chose differently from what was
 recommended at the time, so a later reader can tell a deliberate choice from a default.
@@ -16,7 +17,7 @@ recommended at the time, so a later reader can tell a deliberate choice from a d
   issue is therefore written for a public audience: invented people only, no secret or credential
   value, no unfixed weakness and no audit finding.
 - **D2 — Planning go-live 2027-04-01.** The charter says spring 2027; the backlog plans against
-  April 1.
+  April 1. *(Moved to 2027-04-28 by D39, 2026-09-30, when boat repairs joined the pilot.)*
 - **D5 — The local push guard is on** in the owner's clone (`core.hooksPath=githooks`).
 - **D6 — A pilot cut line.** Every story is tagged *pilot* or *after go-live*; the owner cuts at
   filing.
@@ -111,3 +112,126 @@ archive was already done.
   brand-coloured controls, where the cyan always carries dark ink.
 - **D33 — Verification fixes applied.** An adversarial check of the groomed set (2026-09-30)
   confirmed 84 findings; every fix was applied before filing.
+
+## Boat repairs (2026-09-30, afternoon and evening)
+
+Taken at the boat-repair forge (D34 to D38, recorded in `docs/forged-idea-boatwork-2026-09-30.md`)
+and at the gates of its groom (D39 to D67).
+
+- **D34 — Boat repairs join the pilot** *(against the recommendation of a form now and the Dockbox
+  version later, with the COHSSA and Learn to Sail onboarding)*. A coach reports a broken club boat
+  and when it happened. The boat crew (sailboats) or the safety chair (motorboats) is emailed at
+  once, one of them claims it, and it returns to service when fixed. This adds a core workflow to
+  the charter.
+- **D35 — Every club coach reports**, COHSSA and Learn to Sail coaches included, before their
+  programs join. They hold a repair-only role, never coach or director, with no roster and no
+  sailor data. COHSSA and Learn to Sail exist as programs during the pilot, with reporter
+  memberships only.
+- **D36 — One claimer at a time.** A small mixed group fixes sailboats, so one person at a time
+  claims a report, by a conditional write (the tow-slot pattern).
+- **D37 — The reporter may take a boat out of service** by severity, sailboats and motorboats alike.
+- **D38 — The non-JRT bet and its fallback.** The fallback is taken two weeks after go-live if
+  fewer than half of the non-JRT coaches given accounts have signed in once, or as soon as a repair
+  is found reported by text. Those coaches then report through the fallback form, which is the
+  Clubspot form (D40), not the Google Form first named.
+- **D39 — Go-live moves to 2027-04-28** *(amends D2)*. The whole repair set stays in the pilot; the
+  cut to a 7.75-day core was rejected. The date is the planning page's scheduler on the final set at
+  5 engineer-days a week. It is 2027-04-23 if the CSV-import and consent stories do not fire. D7's
+  medical dates are unchanged. So is D32's reviewer trigger, 2027-03-18: the charter's recorded
+  unknowns word it as "go-live minus two weeks", counted from the old 2027-04-01.
+- **D40 — A Clubspot repair form now, and as the fallback.** Clubspot has no repair module, but a
+  members-only Clubspot form emails a fixed list on each submission. A Clubspot admin puts one up
+  now, before any Dockbox repair code. It bridges until Dockbox's report is live, then serves as
+  D38's fallback.
+- **D41 — One optional photo per report** *(against the recommendation of none)*.
+  - Kept in private storage.
+  - Visible only to the routed crew or chair, the claimer and the reporter.
+  - Never attached to an email.
+  - Deleted when the report is fixed or closed.
+- **D42 — The safety-boat ratio is display only** in the pilot. A ratio rule is a later-release
+  question.
+- **D43 — One boats table, with a director fleet screen** *(against the recommendation of an owner
+  command only)*. The command stays for tests and seeding. Towing (#72) picks a trailer's boats
+  from the same table.
+- **D44 — An owner-only club-roles screen** *(against the recommendation of an owner command)*. It
+  creates, dates and removes the boat crew, the safety chair and the COHSSA and Learn to Sail
+  reporters, and sends reporters' invites. Every role ends on a date.
+- **D45 — Club-role holders may report too.** The crew and the chair can file a report and take a
+  boat out of service.
+- **D46 — #43 keys roster reads on role** (coach and director). It is amended before it is built.
+- **D47 — Severity is one "Not safe to sail" switch**, beside a one-line guideline the safety chair
+  writes.
+- **D48 — The speed bar.** At most 4 taps plus one typed line, in an automated phone-sized check.
+  One more tap is allowed for out of service, and an optional photo is not counted. A real-phone
+  timing against a text message backs it.
+- **D49 — A boat-only hint and an incident pointer** *(against the recommendation of the hint
+  alone)*. The hint reads "the boat only: no names, faces or injuries". The pointer leads to the
+  club's incident process, which is named before the report screen ships.
+- **D50 — A report can close without a fix.** The claimer, or the routed group, closes it as a
+  duplicate or not needed, with a reason. Closing releases any out-of-service flag.
+- **D51 — Repair email is never held.** The crew or chair email and its re-sends join owner alarms
+  as the daily budget's never-held kinds, still counted.
+- **D52 — Repair email links to the report.** Claiming or clearing needs a normal sign-in. No
+  sign-in link or claim token goes in repair email.
+- **D53 — Re-send.**
+  - Out-of-service reports are re-sent after 2 days and others after 7, both configurable.
+  - Unclaimed reports go to the routed group, and claimed ones to the claimer.
+  - Each run sends one bundled email per recipient.
+- **D54 — Down boats show three ways** *(against the recommendation of no extra email)*:
+  - a Repairs home, with down boats first
+  - a section on the before-practice view (#79)
+  - an email to every current coach when a boat goes out of service (recipients in D63)
+
+  The Dock screen is untouched.
+- **D55 — The every-coach notice uses the normal budget.** When over it, the notice queues to the
+  next club day, as D25 does. Only D51's email is never held.
+- **D56 — Recorded here before filing.** These decisions are recorded here before the boat-repair
+  stories are filed, and story bodies cite their D-numbers.
+- **D57 — Develop's red CI gets its own story** under the release-pipeline epic (#5): the Supabase
+  image pulls must survive registry limits. It is #143, filed that evening at the sailor-pathway
+  groom, where the owner made the same call (decision 4 on #135); the boat-repair set files no
+  second one.
+- **D58 — Failure metric 1 is read for repairs at season end**, in the repair epic. The go-live
+  epic (#17) records that metric 1 is unread for every other job. *(Refined by D66.)*
+- **D59 — Staff under 18 are marked, and get no app email.**
+  - The owner sets "under 18" yes or no for each reporter and club-role holder on the club-roles
+    screen, with no birth date.
+  - An under-18 reporter still reports and sees Repairs.
+  - They get no app email beyond the sign-in invite, no every-coach notice, and no club role.
+  - The same flag serves the sailor-pathway epic.
+  - *(Extended by D64 and D65: the mark is held on the person and is also set on #90's roster
+    screen, every repair and out-of-service email skips anyone marked, and nobody marked holds a
+    coach or director membership.)*
+- **D60 — An admins table names the owner.** It holds the owner's person row, is writable only by
+  the server, is seeded by the bootstrap command (#63), and is checked by a tested policy helper.
+  Handing the job to HSC later means changing one row.
+- **D61 — The Clubspot form routes by boat kind**: by a field if Clubspot can, otherwise two forms.
+- **D62 — Repair photos are not media of sailors.** The boat-only hint, the restricted visibility
+  and deletion on fix or close cover them, recorded as a dated charter note. Consent to film minors
+  stays deferred with video.
+- **D63 — Who gets the every-coach notice.** D54's out-of-service email goes to each person who
+  holds a current coach, director or repair-reporter membership in any program, once however many
+  they hold, and never to anyone marked under 18 (D64). Holding a club role adds nobody to the
+  list: the boat crew and the safety chair already get the repair email (D51).
+- **D64 — The under-18 mark is held on the person** *(extends D59)*, not on a club role or a
+  membership. It is set on the club-roles screen and on the director's roster screen (#90, amended
+  at filing). Every repair and out-of-service email, re-sends included, skips anyone marked. The
+  sailor pathway (#135) reuses the mark as its record of staff age (D65).
+- **D65 — One answer for staff under 18**, joining D64's mark to decision 2 on #135. The mark
+  records age, and the assistant role (#145) is what a marked 16- or 17-year-old holds in a
+  program.
+  - The database refuses a coach or director membership for anyone marked under 18, whatever path
+    writes it: the roster screen (#90), the bootstrap command (#63) or the club-roles screen.
+  - It also refuses to mark under 18 anyone who holds a coach or director membership.
+  - So nobody marked holds a coach's or a director's access, or gets the email those roles get.
+  - #145 is amended at filing to require the mark: an assistant membership is refused unless the
+    person is marked under 18.
+  - Marked staff still report repairs and see Repairs (D59).
+  - #21's deciding unknown on staff age is amended at filing to point here.
+- **D66 — Who counts in the repair reading of failure metric 1** *(refines D58)*. A program that
+  declined at the Learn to Sail and COHSSA confirmation is left out of both counts, the repairs
+  learned of outside Coaches' Dockbox and all the repairs handled, since the app never claimed that
+  program's reporting. A program that agreed still counts, even once D38's fallback has fired. The
+  counts are split by program.
+- **D67 — One "Boat repairs" epic** holds all 30 stories. It is split, not stretched, once it
+  passes about 30 stories, the soft cap an epic here is held to.
