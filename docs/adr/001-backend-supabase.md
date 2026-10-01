@@ -44,8 +44,9 @@
     public key, so one table created without RLS is exposed. The other six are stack-neutral or
     favour RLS. RLS refuses a query nobody wrote a check for. Spring's method security leaves a
     method nobody annotated open: its reference says "unannotated methods are not secured"
-    (*measured*), and that approach had four authorization-bypass CVEs between 2025-05 and 2026-09,
-    two of them CRITICAL (*measured*, spring.io/security).
+    (*measured*), and annotation detection in that approach had three authorization-bypass CVEs in
+    2025, one of them CRITICAL: CVE-2025-41232, -41248 and -41249 (*measured*, spring.io/security
+    and the GitHub Advisory Database).
   - **Options priced** (*measured* 2026-09-30 from vendor pricing pages and release records). The
     engineer-days are *reasoned* and ungroomed, measured against 150.5 days before go-live at D39's
     5 a week. The last ungroomed estimate here, boat repairs, came in about 2.9 times low:
