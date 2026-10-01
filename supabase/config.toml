@@ -20,7 +20,10 @@ max_rows = 1000
 # `postgres` are reachable through the Data API roles (`anon`, `authenticated`, `service_role`)
 # without explicit GRANTs, matching the cloud default. Set to `false` to require explicit GRANTs
 # instead. Left unset, a fresh project falls back to `true`.
-# auto_expose_new_tables = true
+# `false` matches what hosted projects do from 2026-10-30 (#34, D69). The migration
+# 20261001120000_deny_api_roles_by_default.sql revokes the same grants and more, so local and hosted
+# match whichever way this is set. Each table's own migration grants what it needs.
+auto_expose_new_tables = false
 
 [api.tls]
 # Enable HTTPS endpoints locally using a self-signed certificate.

@@ -89,6 +89,20 @@
         test. Its default `--fail-on none` never fails a build (*measured*).
     - **The effect.** Exposing a table now takes two deliberate acts, an explicit grant and a
       missing or permissive policy, where before it took one omission.
+    - **As landed in #34 (2026-10-01)**, in `20261001120000_deny_api_roles_by_default.sql`. Three
+      points differ from the plan above, each *measured* on the local stack with CLI 2.118:
+      - Supabase's own lines are not enough. They revoke select, insert, update and delete. With
+        `auto_expose_new_tables = false`, which runs them, anon still held TRUNCATE, REFERENCES,
+        TRIGGER and MAINTAIN on every new table, and UPDATE on every new sequence. The migration
+        revokes all.
+      - Postgres's own EXECUTE to PUBLIC on new functions needs a revoke with no schema, which
+        covers every function `postgres` creates. Supabase's notice does not revoke it.
+      - The RLS trigger is `security invoker`, not the guide's `security definer`, because the
+        creator of a table owns it.
+    - **What the advisors miss.** CLI 2.118's embedded lints do not flag a security-definer function
+      that anon may execute (granting anon EXECUTE on `can_view_medical` reported "No issues
+      found"). The catalog test catches it. An RLS-off table is flagged only when anon or
+      authenticated can read it; one granted to `service_role` alone reports nothing.
     - **What it does not fix, and Spring would not either**: a wrong policy, a bug in
       `can_view_medical`, a leaked service-role or secret key, and an attack on sign-in itself.
     - **One placement to settle with the medical function (#61).** `public.can_view_medical` is a
