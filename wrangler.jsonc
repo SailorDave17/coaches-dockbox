@@ -1,7 +1,7 @@
 // Cloudflare Workers static assets (ADR 003). Deployed by CI on merge to `release` (ADR 008) once
 // the Cloudflare account, the domain and the deploy token exist; until then nothing deploys.
 {
-  "name": "coachs-dockbox",
+  "name": "coaches-dockbox",
   "compatibility_date": "2026-09-29",
   "assets": {
     "directory": "./dist",

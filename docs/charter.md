@@ -1,4 +1,4 @@
-# Coach's Dockbox — charter
+# Coaches' Dockbox — charter
 
 ## Metadata
 - Status: ratified 2026-09-29
@@ -125,7 +125,7 @@ Standing constraint, not optional: **no private coach↔minor messaging** (SafeS
 | App shape | PWA for the pilot; native coach app is the named move | adr/005-app-shape-pwa |
 | Alerts | Web Push + email; SMS before LTS | adr/006-alerts-push-email |
 | Front end | React + TypeScript + Vite PWA | adr/007-frontend-react-vite |
-| Repo, branches, CI/CD | New repo `coachs-dockbox`; develop / release / main; auto-deploy on `release` | adr/008-repo-branches-deploy |
+| Repo, branches, CI/CD | New repo `coaches-dockbox`; develop / release / main; auto-deploy on `release` | adr/008-repo-branches-deploy |
 | Testing | First real test: cross-program medical refusal against local Supabase in CI | adr/009-testing |
 | Observability | Sentry free + scheduled health check | adr/010-observability |
 | Day-1 seams | Migrations, one module per store, typed env, named scheduled work, strict TS + lint | adr/011-day-1-seams |
@@ -222,8 +222,8 @@ zero coach marking, but hardware, weather and friends tapping each other in); *t
 
 ```yaml
 charter_handoff:
-  project: Coach's Dockbox
-  repo: coachs-dockbox   # the owner's working name; the actual repo is named at the scaffold gate
+  project: Coaches' Dockbox
+  repo: coaches-dockbox   # the owner's working name; the actual repo is named at the scaffold gate
   stack:
     language: TypeScript
     framework: React + Vite (PWA)

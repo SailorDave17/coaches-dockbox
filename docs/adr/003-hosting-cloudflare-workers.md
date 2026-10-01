@@ -9,9 +9,10 @@
 - **Consequences**: the domain must be a Cloudflare zone; passkeys and Resend bind to it — pick it once.
 - **Domain** (#23, registered 2026-09-30): **`coachesdockbox.com`**, and it is **sticky**. It is the
   passkey RP ID and the Resend sending parent: a passkey made under it does not work under another
-  name, and another name means verifying sending again. It is spelled *coaches*, unlike the product
-  (Coach's Dockbox) and the slug (`coachs-dockbox`). That was the owner's choice, to match how the
-  name is said aloud; neither spelling is a typo of the other. *Measured* 2026-09-30: registered
+  name, and another name means verifying sending again. It is spelled *coaches*, the owner's choice
+  to match how the name is said aloud. The product and the slug were spelled differently when it was
+  registered, and the owner renamed both to match it the same day, so all three now agree: Coaches'
+  Dockbox, `coaches-dockbox`, `coachesdockbox.com`. *Measured* 2026-09-30: registered
   through Cloudflare Registrar at cost ($10.46/yr, auto-renew on, expires 2027-09-30). Verisign RDAP
   names Cloudflare, Inc. and `dell`/`lars.ns.cloudflare.com`, and the zone is Active on the Free plan.
 - **Handover**: the owner's Cloudflare account also holds unrelated domains, so this domain cannot
