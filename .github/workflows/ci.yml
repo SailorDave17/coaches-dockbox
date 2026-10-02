@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       mutation:
-        description: 'prove-tests: apply tests/mutations/<name>.sql before the DB tests (expect red)'
+        description: 'prove-tests: apply tests/mutations/<name>.sql before the DB tests, or <name>.patch before Supabase starts (expect red)'
         required: false
         default: ''
       plant:
@@ -74,6 +74,20 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Apply a prove-tests code mutation (hand-run only)
+        # A mutation of an Edge Function is a patch, applied here, before Supabase starts: the edge
+        # runtime serves the functions it compiled at start, so a patch applied later never reaches
+        # it (#59). A SQL mutation is applied after the migrations, below. The name must match one.
+        if: ${{ inputs.mutation != '' }}
+        env:
+          MUTATION: ${{ inputs.mutation }}
+        run: |
+          [[ "$MUTATION" =~ ^[a-z0-9-]+$ ]] || { echo "mutation name must be kebab-case"; exit 1; }
+          if [ -f "tests/mutations/${MUTATION}.patch" ]; then
+            git apply --verbose "tests/mutations/${MUTATION}.patch"
+          elif [ ! -f "tests/mutations/${MUTATION}.sql" ]; then
+            echo "no tests/mutations/${MUTATION}.patch or .sql"; exit 1
+          fi
       - name: Start Supabase (applies supabase/migrations)
         # Retries only when the CLI gives up on an image pull. It prints `toomanyrequests` for
         # every refused try, including the ones it recovers from, so keying on that word would
@@ -123,6 +137,7 @@ jobs:
           MUTATION: ${{ inputs.mutation }}
         run: |
           [[ "$MUTATION" =~ ^[a-z0-9-]+$ ]] || { echo "mutation name must be kebab-case"; exit 1; }
+          if [ ! -f "tests/mutations/${MUTATION}.sql" ]; then echo "a code mutation: no SQL to apply"; exit 0; fi
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "tests/mutations/${MUTATION}.sql"
       - run: npm run test:db
       - name: Security advisors

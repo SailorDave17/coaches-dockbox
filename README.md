@@ -65,7 +65,7 @@ The app refuses to start without those two values, on purpose.
 | `npm run lint` | oxlint; a warning fails |
 | `npm run format:check` | Prettier |
 | `npm run typecheck` | `tsc -b` |
-| `npm run test:db` | The medical-access, seasons and club-time, roster-read, guardian-link and sign-in tests, the API-roles reach guard, the policy-functions catalog test, and the heartbeat Edge Function through the gateway, against a local Supabase |
+| `npm run test:db` | The medical-access, seasons and club-time, roster-read, guardian-link and sign-in tests, the API-roles reach guard, the policy-functions catalog test, the heartbeat Edge Function through the gateway, and admission through the admit function, against a local Supabase |
 | `npm run test:unit` | The glare token test: every colour token classified, every text-on-background pair the stylesheets declare held to the glare contrast. Also the sign-in decisions, with a fake auth client, and local Auth's settings in `supabase/config.toml` |
 | `npm run test:screens` | Every screen through the accessibility helper, in Chromium against the built app. Run `npm run build` first |
 | `npm run lint:functions` | `deno lint` over the Edge Functions in `supabase/functions/` |
@@ -78,7 +78,9 @@ The Edge Functions are Deno, which `tsc -b` and Vitest do not cover. Deno comes 
 Every function loads its env at module scope through `supabase/functions/_shared/env.ts` (ADR 011),
 so a missing secret fails the function at boot, not at its first request. After editing a function,
 restart the local edge runtime (`docker restart supabase_edge_runtime_coaches-dockbox`): it serves a
-copy compiled at start, so an edit does not reach it until then.
+copy compiled at start, so an edit does not reach it until then. A new function is not served until
+the whole stack restarts (`npx supabase stop`, then `start`), because the list of functions is fixed
+when the stack starts; until then its URL answers the gateway's 404.
 
 `test:db` needs a local Supabase (`npx supabase start`, which needs Docker) and its credentials
 exported from `npx supabase status -o env`. CI runs it on every pull request, then runs Supabase's
@@ -91,6 +93,8 @@ director, the other-program cases among them. With `policy-calls-unlisted-define
 allow-list case. With `medical-any-guardian-passes`, exactly two: the unlinked guardian and another
 sailor's guardian. With `guardian-read-ignores-unlink`, exactly one: the unlinked guardian's read.
 With `me-ignores-caller`, exactly three: each sign-in case that reads its own name from `public.me`.
+With `admit-anyone`, exactly one: the admission case for an email on no roster. It is a patch to the
+admit function rather than SQL, so CI applies it before Supabase starts.
 Each file names the cases it expects.
 To prove a step fails where it fails, run it by hand with a `plant`:
 `unreachable-registry` fails every pull, so the `Start Supabase` step tries three times and then
@@ -142,12 +146,20 @@ not on a Dockbox roster yet" (`supabase/migrations/20261001200000_read_own_perso
 third helper, `private.my_person_id()`). Sign out ends this device's session only, and runs the
 sign-out hooks first (`onSignOut` in `src/auth/session.ts`), which is where the card cache wipes.
 
+An account exists only when server code admits a person (#59). A `people` row carries the email the
+roster sync or a director wrote, stored lower-case and unique, and readable by no client. The `admit`
+Edge Function, called with the service-role key, creates a confirmed account for that email and sets
+the row's `auth_user_id` itself: `POST /functions/v1/admit` with `{ "email": "…" }`. It answers 404 and
+creates nothing for an email no row carries, is safe to repeat or run twice at once, and never reads
+`user_metadata`, which a user can rewrite. No client may write `auth_user_id`. The shared code is
+`supabase/functions/_shared/admission.ts`, for the roster sync to import.
+
 To sign in locally, start the local Supabase, put its `API_URL` and `ANON_KEY` in `.env.local`, and
 run `npm run dev`, which serves on `http://localhost:5173`, the one origin local Auth sends links back
-to. A person needs an account and a linked `people` row first, made with the secret key: Auth's
-admin `createUser` with `email_confirm: true`, then a `people` row with its `auth_user_id`. The
-emailed link lands in the local mailbox (`INBUCKET_URL` in `npx supabase status`). Admin
-`generateLink` makes one without sending mail.
+to. A person needs a `people` row with an email, then admission: insert the row with the service-role
+key and `POST` its email to `$FUNCTIONS_URL/admit` with the same key. The emailed link lands in the
+local mailbox (`INBUCKET_URL` in `npx supabase status`). Admin `generateLink` makes one without
+sending mail.
 
 ## Branches
 
