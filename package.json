@@ -20,6 +20,7 @@
     "lint:functions": "deno lint supabase/functions",
     "typecheck:functions": "deno check supabase/functions",
     "test:functions": "deno test --allow-env=DOCKBOX_TEST_URL,DOCKBOX_TEST_KEY,DOCKBOX_TEST_TOKEN --allow-read=supabase/functions supabase/functions",
+    "bootstrap:program": "node scripts/bootstrap-program.ts",
     "probe:dev": "vite --config spikes/device-probe/vite.config.ts",
     "probe:build": "tsc -b spikes/device-probe && vite build --config spikes/device-probe/vite.config.ts",
     "probe:preview": "vite preview --config spikes/device-probe/vite.config.ts"
