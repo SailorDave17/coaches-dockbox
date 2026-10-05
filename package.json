@@ -21,6 +21,7 @@
     "typecheck:functions": "deno check supabase/functions",
     "test:functions": "deno test --allow-env=DOCKBOX_TEST_URL,DOCKBOX_TEST_KEY,DOCKBOX_TEST_TOKEN --allow-read=supabase/functions supabase/functions",
     "bootstrap:program": "node scripts/bootstrap-program.ts",
+    "check:deploy": "node scripts/check-deploy.ts",
     "probe:dev": "vite --config spikes/device-probe/vite.config.ts",
     "probe:build": "tsc -b spikes/device-probe && vite build --config spikes/device-probe/vite.config.ts",
     "probe:preview": "vite preview --config spikes/device-probe/vite.config.ts"
@@ -46,6 +47,8 @@
     "typescript": "~7.0.2",
     "vite": "^8.3.1",
     "vite-plugin-pwa": "^1.3.0",
-    "vitest": "^5.0.2"
+    "vitest": "^5.0.2",
+    "wrangler": "4.147.0",
+    "yaml": "^2.9.1"
   }
 }

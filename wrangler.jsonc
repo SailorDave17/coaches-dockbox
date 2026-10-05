@@ -1,5 +1,6 @@
-// Cloudflare Workers static assets (ADR 003). Deployed by CI on merge to `release` (ADR 008) once
-// the Cloudflare account, the domain and the deploy token exist; until then nothing deploys.
+// Cloudflare Workers static assets (ADR 003). Deployed on every push to `release` by the deploy job in
+// .github/workflows/ci.yml (ADR 008, #38), at the workers.dev address until the domain is declared
+// here (#51). Every pull request checks this file with `wrangler deploy --dry-run`.
 {
   "name": "coaches-dockbox",
   "compatibility_date": "2026-09-29",
