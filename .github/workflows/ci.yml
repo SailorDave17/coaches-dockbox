@@ -7,20 +7,41 @@ on:
   workflow_dispatch:
     inputs:
       mutation:
-        description: 'prove-tests: apply tests/mutations/<name>.sql before the DB tests (expect red)'
+        description: 'prove-tests: apply tests/mutations/<name>.sql before the DB tests, or <name>.patch before Supabase starts (expect red)'
+        required: false
+        default: ''
+      plant:
+        description: 'prove a step fails: unreachable-registry or broken-migration (Start Supabase), table-without-rls (advisors) (expect red)'
         required: false
         default: ''
 
 permissions:
   contents: read
 
+# Every action is pinned to a commit SHA, with its release in the comment (security audit,
+# 2026-10-01): a tag can be moved to other code, a commit cannot. Dependabot's github-actions
+# updates move the SHA and the comment together.
 jobs:
   checks:
+    # This name is a required status check on develop, release and main, spelled exactly as
+    # here (repository ruleset, #28). A pull request that renames it cannot merge: the check
+    # the ruleset waits for never reports. Rename the check in the ruleset first.
     name: lint, format, types, build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: actionlint
+        # The workflow linter (#38): a pinned release, checked against the sha256 its release
+        # publishes. It runs shellcheck over every run: script too, which ubuntu-latest carries.
+        # Dependabot does not move this pin; a new release is a hand edit of both values.
+        shell: bash
+        run: |
+          curl -sSfL -o "$RUNNER_TEMP/actionlint.tar.gz" \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $RUNNER_TEMP/actionlint.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -color
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: npm
@@ -29,25 +50,102 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
       - run: npm run typecheck
+      - run: npm run test:unit
+      # The Edge Functions are Deno, which tsc and Vitest do not cover (#35). Deno comes from the
+      # `deno` dev dependency, so these run after npm ci with no extra action.
+      - run: npm run lint:functions
+      - run: npm run typecheck:functions
+      - run: npm run test:functions
       - run: npm run build
+        env:
+          # Placeholders, and public ones: config.ts stops the app at load without these two, and
+          # the screen tests below scan what the built app renders. Nothing deploys this build.
+          VITE_SUPABASE_URL: http://127.0.0.1:54321
+          VITE_SUPABASE_ANON_KEY: ci-placeholder-not-a-key
+      # The Worker's config and the built assets, checked by wrangler with no credentials (#38). This
+      # job reads no secret, so a pull request from Dependabot, which is given none, runs it the same.
+      - run: npx wrangler deploy --dry-run
+        env:
+          WRANGLER_SEND_METRICS: 'false'
+      # Chromium's headless shell, which is what the screen tests run (#36).
+      - run: npx playwright install --with-deps --only-shell chromium
+      - run: npm run test:screens
 
   db-tests:
+    # Also a required status check by this exact name (#28): see the note on `checks`.
     name: medical access against a local Supabase
     runs-on: ubuntu-latest
     env:
       # ghcr.io throttled `supabase start` pulls in this workspace on 2026-09-23 and a token
       # docker login did not lift it; this registry did (cairn memory, ghcr-throttle note).
       SUPABASE_INTERNAL_IMAGE_REGISTRY: public.ecr.aws
+      # Start only what the test uses: postgres (always), gotrue, postgrest, kong and edge-runtime,
+      # which serves supabase/functions behind kong for tests/db/heartbeat.test.ts (#35). On this
+      # repo's first push ECR refused `storage-api` and `studio`, two images the test never needs.
+      SUPABASE_EXCLUDE: realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,logflare,vector,supavisor
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Apply a prove-tests code mutation (hand-run only)
+        # A mutation of an Edge Function is a patch, applied here, before Supabase starts: the edge
+        # runtime serves the functions it compiled at start, so a patch applied later never reaches
+        # it (#59). A SQL mutation is applied after the migrations, below. The name must match one.
+        if: ${{ inputs.mutation != '' }}
+        env:
+          MUTATION: ${{ inputs.mutation }}
+        run: |
+          [[ "$MUTATION" =~ ^[a-z0-9-]+$ ]] || { echo "mutation name must be kebab-case"; exit 1; }
+          if [ -f "tests/mutations/${MUTATION}.patch" ]; then
+            git apply --verbose "tests/mutations/${MUTATION}.patch"
+          elif [ ! -f "tests/mutations/${MUTATION}.sql" ]; then
+            echo "no tests/mutations/${MUTATION}.patch or .sql"; exit 1
+          fi
       - name: Start Supabase (applies supabase/migrations)
-        run: npx supabase start
+        # Retries only when the CLI gives up on an image pull. It prints `toomanyrequests` for
+        # every refused try, including the ones it recovers from, so keying on that word would
+        # retry a broken migration too (cairn memory, ghcr-throttle note, 2026-09-26). A
+        # `Data limit exceeded` refusal does not clear inside one job: re-run the job instead.
+        # `shell: bash` is load-bearing. It runs this as `bash -eo pipefail`, so the `if` below
+        # tests `supabase start` and not `tee`. Without it the default `bash -e` has no pipefail,
+        # and run 36657679343 went green after every pull failed (#27).
+        shell: bash
+        env:
+          PLANT: ${{ inputs.plant }}
+        run: |
+          # A hand-run plant proves this step fails (#27). Each one must turn it red.
+          case "$PLANT" in
+            '') ;;
+            unreachable-registry) export SUPABASE_INTERNAL_IMAGE_REGISTRY=registry.invalid ;;
+            broken-migration) cp tests/plants/broken-migration.sql supabase/migrations/29991231235959_planted_broken_migration.sql ;;
+            table-without-rls) cp tests/plants/table-without-rls.sql supabase/migrations/29991231235959_planted_table_without_rls.sql ;;
+            *) echo "unknown plant: $PLANT"; exit 1 ;;
+          esac
+          echo "pulling images from $SUPABASE_INTERNAL_IMAGE_REGISTRY"
+          for attempt in 1 2 3; do
+            if npx supabase start -x "$SUPABASE_EXCLUDE" 2>&1 | tee start.log; then exit 0; fi
+            if ! grep -q "failed to pull docker image" start.log; then
+              echo "supabase start failed, not on an image pull: not retrying"; exit 1
+            fi
+            grep -o "failed to pull docker image[^:]*: [^ ]*" start.log | sed "s/^/attempt $attempt: /" >> failed-pulls.log
+            echo "image pull refused on attempt $attempt of 3"
+            if [ "$attempt" -lt 3 ]; then
+              echo "retrying in 30 s"
+              npx supabase stop --no-backup > /dev/null 2>&1 || true
+              sleep 30
+            fi
+          done
+          echo "supabase start: every attempt failed to pull an image:"
+          cat failed-pulls.log
+          exit 1
       - name: Export the local credentials to later steps
+        id: credentials
+        # `shell: bash` for pipefail again: a failed `supabase status` fails this step, rather than
+        # piping nothing into GITHUB_ENV and failing later at npm run test:db (#27).
+        shell: bash
         run: npx supabase status -o env | sed 's/"//g' >> "$GITHUB_ENV"
       - name: Apply a prove-tests mutation (hand-run only)
         if: ${{ inputs.mutation != '' }}
@@ -55,5 +153,114 @@ jobs:
           MUTATION: ${{ inputs.mutation }}
         run: |
           [[ "$MUTATION" =~ ^[a-z0-9-]+$ ]] || { echo "mutation name must be kebab-case"; exit 1; }
+          if [ ! -f "tests/mutations/${MUTATION}.sql" ]; then echo "a code mutation: no SQL to apply"; exit 0; fi
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "tests/mutations/${MUTATION}.sql"
       - run: npm run test:db
+      - name: Security advisors
+        # Supabase's own security lints against the local database, beside the catalog test (#34,
+        # D69). `--fail-on` defaults to `none`, which never fails a build, so it is set. `warn` is
+        # the level because "RLS enabled, no policy" is INFO and fires on every deny-by-design
+        # table. It runs after a red test too, so the `table-without-rls` plant shows both
+        # instruments catching the same table.
+        if: ${{ !cancelled() && steps.credentials.outcome == 'success' }}
+        run: npx supabase db advisors --local --type security --fail-on warn
+
+  deploy:
+    # Production (#38, ADR 008). It runs on a push to release and on nothing else, after both checks
+    # have passed on the same commit, and it is the only job that reads a secret. The production
+    # environment admits the release branch only, so its secrets cannot reach another branch's job
+    # either. tests/unit/workflows.test.ts holds this shape, and a step that runs past a failure fails
+    # it: any failure stops the rest. This job is not a required check, because it runs after a merge.
+    name: deploy to production
+    if: github.event_name == 'push' && github.ref == 'refs/heads/release'
+    needs: [checks, db-tests]
+    runs-on: ubuntu-latest
+    environment: production
+    # Two merges in a row deploy in order: the second waits for the first rather than racing it.
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    steps:
+      # The job's own GitHub token is not left in .git/config for the steps that follow.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+      # No install scripts here: later steps hand the production tokens to tools in node_modules, and
+      # an install script is how a compromised package would rewrite them first (security audit on
+      # #38). Nothing this job runs needs one: the build, wrangler, the Supabase CLI and the check
+      # were measured without them, and the browser is installed by its own step.
+      - run: npm ci --ignore-scripts
+      # Each secret travels by name, into the env of the steps that use it and no others, and nothing
+      # here prints one. A secret or variable never added arrives as an empty string; this names it.
+      - name: Refuse a missing secret or variable, naming it
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: >-
+          node scripts/require-env.ts SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_REF
+          CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY
+      # A Free project pauses after a week unused (ADR 001), and every step below would then fail
+      # without saying why. This names the pause before anything reaches production.
+      - name: Refuse a paused project, naming the pause
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: npm run check:deploy -- --project
+      # Built, and the browser for the last step installed, before the first production act, so a
+      # failure in either leaves production untouched.
+      - name: Build with the live project's public values
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: npm run build
+      - run: npx playwright install --with-deps --only-shell chromium
+      # The only way a migration reaches the live project (README). `link` finds the project's IPv4
+      # pooler, which db push then uses: GitHub's runners have no IPv6, and the direct database
+      # address has nothing else on Free.
+      - name: Apply the migrations to the live project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          npx supabase link --project-ref "$SUPABASE_PROJECT_REF"
+          npx supabase db push --yes
+      # Bundled by Supabase rather than in Docker (--use-api), so this job pulls no image. Skipped,
+      # saying so, when supabase/functions holds no function; _shared is code the functions import.
+      - name: Deploy the Edge Functions
+        shell: bash
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          shopt -s nullglob
+          functions=(supabase/functions/[!_]*/index.ts)
+          if [ ${#functions[@]} -eq 0 ]; then
+            echo "No Edge Function under supabase/functions: nothing to deploy"
+            exit 0
+          fi
+          npx supabase functions deploy --use-api --project-ref "$SUPABASE_PROJECT_REF"
+      # Wrangler writes each address it deployed to into this file, which the last step reads.
+      - name: Deploy the Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.json
+          WRANGLER_SEND_METRICS: 'false'
+        run: npx wrangler deploy
+      # D21(b): the served page, past any service worker, must be a started app stamped with this
+      # commit, and the project must not be paused (scripts/check-deploy.ts).
+      - name: Check the served page started and carries this commit
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: npm run check:deploy -- --sha "$GITHUB_SHA" --wrangler-output "$RUNNER_TEMP/wrangler-output.json"

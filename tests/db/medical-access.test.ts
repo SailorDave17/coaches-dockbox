@@ -4,12 +4,21 @@
 // running the workflow by hand with `mutation: medical-ignores-program` (expected: exactly the
 // "refuses a coach of another program" case turns red).
 //
+// Since #39 access also ends with the season. Its mutation is
+// tests/mutations/medical-ignores-season-dates.sql (expected: exactly the "season ended yesterday"
+// and "season starts tomorrow" cases turn red).
+//
+// Since #53 a sailor's currently linked guardians are let through too. Its mutation is
+// tests/mutations/medical-any-guardian-passes.sql (expected: exactly the unlinked-guardian and
+// another-sailor's-guardian cases turn red).
+//
 // It needs a local Supabase (`npx supabase start`, which needs Docker) and its credentials in the
 // environment (`npx supabase status -o env`). With nothing set it fails loudly rather than skipping:
 // a skipped test here would read as a pass.
 import { randomUUID } from 'node:crypto'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { beforeAll, describe, expect, it } from 'vitest'
+import postgres from 'postgres'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 function env(...names: string[]): string {
   for (const name of names) {
@@ -24,6 +33,10 @@ function env(...names: string[]): string {
 const url = env('API_URL', 'SUPABASE_URL')
 const anonKey = env('ANON_KEY', 'PUBLISHABLE_KEY')
 const serviceKey = env('SERVICE_ROLE_KEY', 'SECRET_KEY')
+// Read only for the club's date, so each season is dated by the same club_today() the access
+// check calls.
+const sql = postgres(env('DB_URL'), { max: 1, onnotice: () => {} })
+afterAll(() => sql.end())
 
 const noSession = { auth: { persistSession: false, autoRefreshToken: false } }
 const admin = createClient(url, serviceKey, noSession)
@@ -31,12 +44,19 @@ const admin = createClient(url, serviceKey, noSession)
 // Unique per run, so reruns against the same local database never collide.
 const run = randomUUID().slice(0, 8)
 const password = `pw-${randomUUID()}`
-const SEASON = '2027-spring'
 const emails = {
   sameProgram: `coach-jrt-${run}@example.test`,
   otherProgram: `coach-lts-${run}@example.test`,
+  lapsed: `coach-jrt-last-${run}@example.test`,
+  upcoming: `coach-jrt-next-${run}@example.test`,
+  oneDay: `coach-jrt-regatta-${run}@example.test`,
+  // Guardians hold no membership, so only their links can let them through.
+  guardian: `guardian-${run}@example.test`,
+  unlinkedGuardian: `guardian-unlinked-${run}@example.test`,
+  otherGuardian: `guardian-other-${run}@example.test`,
 }
 let sailorId = ''
+let today = ''
 
 async function insertOne(table: string, row: Record<string, unknown>): Promise<{ id?: string }> {
   const { data, error } = await admin.from(table).insert(row).select().single()
@@ -49,6 +69,13 @@ function idOf(row: { id?: string }): string {
   return row.id
 }
 
+/** The club's date `days` from today, as club_today() counts it. */
+async function clubDay(days: number): Promise<string> {
+  const [row] = await sql<{ day: string }[]>`select (public.club_today() + ${days}::int)::text as day`
+  if (!row) throw new Error('club_today() returned no row')
+  return row.day
+}
+
 async function signedIn(email: string): Promise<SupabaseClient> {
   const client = createClient(url, anonKey, noSession)
   const { error } = await client.auth.signInWithPassword({ email, password })
@@ -57,14 +84,28 @@ async function signedIn(email: string): Promise<SupabaseClient> {
 }
 
 beforeAll(async () => {
+  today = await clubDay(0)
   const jrt = idOf(await insertOne('programs', { name: `JRT ${run}` }))
   const lts = idOf(await insertOne('programs', { name: `LTS ${run}` }))
 
-  const coaches: Array<[string, string]> = [
-    [emails.sameProgram, jrt],
-    [emails.otherProgram, lts],
+  async function season(programId: string, name: string, startsIn: number, endsIn: number) {
+    const dates = { starts_on: await clubDay(startsIn), ends_on: await clubDay(endsIn) }
+    return idOf(await insertOne('seasons', { program_id: programId, name: `${name} ${run}`, ...dates }))
+  }
+  const jrtNow = await season(jrt, 'Spring', -30, 30)
+  const jrtLast = await season(jrt, 'Fall', -120, -1) // ended yesterday in club time
+  const jrtNext = await season(jrt, 'Summer', 1, 90) // starts tomorrow in club time
+  const jrtOneDay = await season(jrt, 'Regatta day', 0, 0) // starts and ends today
+  const ltsNow = await season(lts, 'Spring', -30, 30)
+
+  const coaches: Array<[string, string, string]> = [
+    [emails.sameProgram, jrt, jrtNow],
+    [emails.otherProgram, lts, ltsNow],
+    [emails.lapsed, jrt, jrtLast],
+    [emails.upcoming, jrt, jrtNext],
+    [emails.oneDay, jrt, jrtOneDay],
   ]
-  for (const [email, programId] of coaches) {
+  for (const [email, programId, seasonId] of coaches) {
     const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true })
     if (error) throw new Error(`create user ${email}: ${error.message}`)
     const coachId = idOf(
@@ -74,12 +115,40 @@ beforeAll(async () => {
       person_id: coachId,
       program_id: programId,
       role: 'coach',
-      season: SEASON,
+      season_id: seasonId,
     })
   }
 
   sailorId = idOf(await insertOne('people', { first_name: 'Maya', last_name: run }))
-  await insertOne('memberships', { person_id: sailorId, program_id: jrt, role: 'sailor', season: SEASON })
+  for (const seasonId of [jrtNow, jrtLast, jrtNext, jrtOneDay]) {
+    await insertOne('memberships', {
+      person_id: sailorId,
+      program_id: jrt,
+      role: 'sailor',
+      season_id: seasonId,
+    })
+  }
+  // Maya's current guardian, Maya's unlinked guardian, and the current guardian of another sailor.
+  const otherSailorId = idOf(await insertOne('people', { first_name: 'Eli', last_name: run }))
+  const guardians: Array<[string, string, string | null]> = [
+    [emails.guardian, sailorId, null],
+    [emails.unlinkedGuardian, sailorId, new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()],
+    [emails.otherGuardian, otherSailorId, null],
+  ]
+  for (const [email, linkedSailorId, unlinkedAt] of guardians) {
+    const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true })
+    if (error) throw new Error(`create user ${email}: ${error.message}`)
+    const guardianId = idOf(
+      await insertOne('people', { auth_user_id: data.user.id, first_name: 'Guardian', last_name: run }),
+    )
+    const { error: linkError } = await admin.from('guardian_links').insert({
+      guardian_id: guardianId,
+      sailor_id: linkedSailorId,
+      unlinked_at: unlinkedAt,
+    })
+    if (linkError) throw new Error(`link ${email}: ${linkError.message}`)
+  }
+
   await insertOne('medical_flags', {
     sailor_id: sailorId,
     flags: ['Carries EpiPen'],
@@ -89,7 +158,7 @@ beforeAll(async () => {
 
 describe('medical card access (ADR 002, ADR 009)', () => {
   // The positive control. Without it, a function that always answered false would pass the
-  // refusal below for the wrong reason.
+  // refusals below for the wrong reason.
   it("lets a coach of the sailor's own program through", async () => {
     const coach = await signedIn(emails.sameProgram)
     const { data, error } = await coach.rpc('can_view_medical', { p_sailor: sailorId })
@@ -109,5 +178,58 @@ describe('medical card access (ADR 002, ADR 009)', () => {
     const { data, error } = await coach.from('medical_flags').select('*').eq('sailor_id', sailorId)
     expect(data).toBeNull()
     expect(error?.code).toBe('42501') // insufficient_privilege: the table is revoked, not merely empty
+  })
+})
+
+// Each coach here shares a season with the sailor, in the sailor's own program, so only that
+// season's dates can refuse them.
+describe('medical card access ends with the season (#39)', () => {
+  it('refuses a coach whose only season ended yesterday in club time', async () => {
+    const coach = await signedIn(emails.lapsed)
+    const { data, error } = await coach.rpc('can_view_medical', { p_sailor: sailorId })
+    expect(error).toBeNull()
+    expect(data).toBe(false)
+  })
+
+  it('refuses a coach whose only season starts tomorrow in club time', async () => {
+    const coach = await signedIn(emails.upcoming)
+    const { data, error } = await coach.rpc('can_view_medical', { p_sailor: sailorId })
+    expect(error).toBeNull()
+    expect(data).toBe(false)
+  })
+
+  // Both ends of the date range are inclusive: a season that starts and ends today is current.
+  it('lets a coach through on a season that starts and ends today', async () => {
+    const coach = await signedIn(emails.oneDay)
+    const { data, error } = await coach.rpc('can_view_medical', { p_sailor: sailorId })
+    expect(await clubDay(0), 'the club date turned over during the test: run it again').toBe(today)
+    expect(error).toBeNull()
+    expect(data).toBe(true)
+  })
+})
+
+// Each guardian holds no membership, so the coach clause can admit none of them, and only their link
+// decides. The unlinked guardian's link is Maya's, like the current guardian's, and differs only in
+// being unlinked. The other guardian's link is current, and differs only in being another sailor's.
+describe("medical card access for a sailor's own guardians (#53)", () => {
+  it('lets a currently linked guardian through', async () => {
+    const guardian = await signedIn(emails.guardian)
+    const { data, error } = await guardian.rpc('can_view_medical', { p_sailor: sailorId })
+    expect(error).toBeNull()
+    expect(data).toBe(true)
+  })
+
+  it('refuses a guardian whose link to the sailor was unlinked', async () => {
+    const guardian = await signedIn(emails.unlinkedGuardian)
+    const { data, error } = await guardian.rpc('can_view_medical', { p_sailor: sailorId })
+    expect(error).toBeNull()
+    expect(data).toBe(false)
+  })
+
+  it("refuses another sailor's guardian", async () => {
+    const guardian = await signedIn(emails.otherGuardian)
+    const { data, error } = await guardian.rpc('can_view_medical', { p_sailor: sailorId })
+    expect(error).toBeNull()
+    expect(data).toBe(false)
   })
 })

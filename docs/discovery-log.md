@@ -1,6 +1,6 @@
 > **Frozen at ratification, 2026-09-29.** The working decision log from `forge-idea`, `charter-project` and `design-bar`, moved here from cairn's auto-memory inbox when this repo was scaffolded. `charter.md` and `adr/` are the documents of record; this is the question-by-question history behind them, kept for the rejected options.
 
-slug: coachs-dockbox — charter-project decision log for **Coach's Dockbox** (working name; first chosen as "Dock Box" 2026-09-28, renamed by the owner 2026-09-29)
+slug: coaches-dockbox — charter-project decision log for **Coaches' Dockbox** (working name; first chosen as "Dock Box" 2026-09-28, renamed by the owner 2026-09-29)
 
 In-flight working state for `charter-project`, not inbox material (`memory/auto/README.md` carve-out).
 Deleted by charter-project once the charter lands in the target repo's `docs/`.
@@ -297,11 +297,11 @@ Phase 5 exit: numbers and shapes on the log. Owner chose **continue**.
 
 ### Name change (2026-09-29)
 
-**Renamed by the owner: "Dock Box" → "Coach's Dockbox"** (slug `coachs-dockbox`; this log renamed to
+**Renamed by the owner: "Dock Box" → "Coaches' Dockbox"** (slug `coaches-dockbox`; this log renamed to
 match). **Correction to 1.4**: the 2026-09-28 search for "Dock Box" (two words) found no software, but
 *measured* 2026-09-29, **"Dockbox" (one word) is a live software product** — Dockbox by AiOn Systems
 (dockbox.dev), a team collaboration suite with chat, projects, files, calendar. Same broad category.
-"Coach's Dockbox" is more distinct than the bare word; no trademark check performed. Kept at the
+"Coaches' Dockbox" is more distinct than the bare word; no trademark check performed. Kept at the
 owner's choice.
 
 ## Phase 6 — Stack & architecture (2026-09-29)
@@ -415,7 +415,7 @@ test push. That is failure metric 1.1's "families reachable" number.
 
 | # | Question | Options offered | Answer → ADR |
 |---|---|---|---|
-| 6.11 | Repo | new repo `coachs-dockbox` / evolve cohssa-attendance | **New repo `coachs-dockbox`**; salvage copied in → ADR 008 |
+| 6.11 | Repo | new repo `coaches-dockbox` / evolve cohssa-attendance | **New repo `coaches-dockbox`**; salvage copied in → ADR 008 |
 | 6.12 | cohssa-attendance meanwhile | freeze, COHSSA joins later / finish v1 as a bridge / archive | **Archive it.** COHSSA runs spring 2027 on paper and joins Dockbox after the pilot. Archiving is a GitHub write → **its own gate at the writes stage**, never done inside discovery. `policies/cohssa-minor-data-handling.md` then needs its status moved to superseded / archived in the same pass |
 | 6.13 | First real test | medical access refused / grade-date unit tests | **A coach of another program is refused a sailor's emergency card**, run against a local Supabase in CI — proven failable per `prove-tests` → ADR 009 |
 | 6.14 | Monitoring | Sentry free + scheduled health check / health check only | **Sentry Developer (free) for exceptions, with PII / medical scrubbing before send, plus a scheduled health-check function that emails the owner on failed deliveries, stale Clubspot sync, or a purge that did not run** → ADR 010 |
@@ -544,17 +544,17 @@ Owner chose **continue**.
 
 Everything below is compiled from phases 1–8 above; nothing new is decided here except the drafted
 **signature moment**, which the owner confirms or amends at the gate. Lands as `docs/charter.md` and
-`docs/adr/NNN-*.md` in `coachs-dockbox` at the scaffold step, after which this log is deleted.
+`docs/adr/NNN-*.md` in `coaches-dockbox` at the scaffold step, after which this log is deleted.
 
 ---
 
-# Coach's Dockbox — charter
+# Coaches' Dockbox — charter
 
 ## Metadata
 - Status: ratified 2026-09-29
 - Owner: HSCCo (Hoover Sailing Club; JRT program director)
 - Forge-idea provenance: run 2026-09-28, verdict *hardened, with one bet*
-- Decision log: `charter-coachs-dockbox-decision-log.md` (cairn auto-memory; deleted once this lands)
+- Decision log: `charter-coaches-dockbox-decision-log.md` (cairn auto-memory; deleted once this lands)
 
 ## Problem & vision
 Hoover Sailing Club's coaches, parents and sailors juggle **too many apps** (*reported*, owner, a
@@ -675,7 +675,7 @@ Standing constraint, not optional: **no private coach↔minor messaging** (SafeS
 | App shape | PWA for the pilot; native coach app is the named move | adr/005-app-shape-pwa |
 | Alerts | Web Push + email; SMS before LTS | adr/006-alerts-push-email |
 | Front end | React + TypeScript + Vite PWA | adr/007-frontend-react-vite |
-| Repo, branches, CI/CD | New repo `coachs-dockbox`; develop / release / main; auto-deploy on `release` | adr/008-repo-branches-deploy |
+| Repo, branches, CI/CD | New repo `coaches-dockbox`; develop / release / main; auto-deploy on `release` | adr/008-repo-branches-deploy |
 | Testing | First real test: cross-program medical refusal against local Supabase in CI | adr/009-testing |
 | Observability | Sentry free + scheduled health check | adr/010-observability |
 | Day-1 seams | Migrations, one module per store, typed env, named scheduled work, strict TS + lint | adr/011-day-1-seams |
@@ -772,8 +772,8 @@ zero coach marking, but hardware, weather and friends tapping each other in); *t
 
 ```yaml
 charter_handoff:
-  project: Coach's Dockbox
-  repo: coachs-dockbox   # the owner's working name; the actual repo is named at the scaffold gate
+  project: Coaches' Dockbox
+  repo: coaches-dockbox   # the owner's working name; the actual repo is named at the scaffold gate
   stack:
     language: TypeScript
     framework: React + Vite (PWA)
@@ -935,7 +935,7 @@ charter_handoff:
 - **Kill condition**: vite-plugin-pwa cannot produce a service worker that serves the offline card cache
   correctly on iOS.
 
-## ADR 008 — New repo `coachs-dockbox`; develop / release / main; auto-deploy on release
+## ADR 008 — New repo `coaches-dockbox`; develop / release / main; auto-deploy on release
 - Status: proposed 2026-09-29 · Phases 6, 8
 - **Context**: cohssa-attendance's Sheet architecture and names-only policy cannot carry this.
 - **Options**: **new repo** (clean; salvage copied in); **evolve cohssa-attendance** (keeps history, but
@@ -999,7 +999,7 @@ charter_handoff:
 | 9.1 | Charter | approve + design-bar next / approve + repo setup / amend / kill | **Approved (ratified 2026-09-29); route to `design-bar` before decomposition** |
 | 9.2 | Signature moment | keep as drafted / loosen to 2 minutes / a different moment | **Kept as drafted**: roster in under 60 s; one tap to a missing sailor's guardian or, with no signal, their emergency card |
 
-Next: `design-bar` on the dock experience; then the gated writes, one approval each (repo + scaffold, board, story filing), and the cohssa-attendance archive at its own gate. This log stays until the charter lands in `coachs-dockbox/docs/`.
+Next: `design-bar` on the dock experience; then the gated writes, one approval each (repo + scaffold, board, story filing), and the cohssa-attendance archive at its own gate. This log stays until the charter lands in `coaches-dockbox/docs/`.
 
 ## design-bar (2026-09-29)
 

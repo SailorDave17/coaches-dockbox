@@ -1,0 +1,26 @@
+prove-tests mutation for #59. Applied in CI only on a hand-run of the workflow with
+`mutation: admit-anyone`, by `git apply` before Supabase starts: the edge runtime serves the
+functions it compiled at start, so a patch applied later would never reach it.
+
+It drops the admit function's roster check: an email that no people row carries still gets a
+confirmed account, though nobody is linked to it. Everything else is unchanged.
+Predicted: exactly one red, in admission.test.ts:
+- "refuses an email on no roster, creating no account".
+Every other admission case uses an email a people row carries, or is refused before the roster is
+read. Any other result means the tests are not measuring what they name.
+
+--- a/supabase/functions/_shared/admission.ts
++++ b/supabase/functions/_shared/admission.ts
+@@ -27,7 +27,11 @@
+ 
+   const api = client(config)
+   const person = await findPerson(api, email)
+-  if (!person) return { status: 'not-on-roster' }
++  if (!person) {
++    // MUTATION admit-anyone: an email on no roster still gets an account.
++    const account = await createAccount(api, email)
++    return { status: 'admitted', personId: '', accountCreated: account.created }
++  }
+   if (person.auth_user_id) return { status: 'admitted', personId: person.id, accountCreated: false }
+ 
+   const account = await createAccount(api, email)

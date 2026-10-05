@@ -23,5 +23,7 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts", "vitest.config.ts", "tests"]
+  "include": ["vite.config.ts", "vitest.config.ts", "tests", "scripts"],
+  /* The screen tests and their helper run code in the page, so they need DOM: tsconfig.screens.json. */
+  "exclude": ["tests/screens", "tests/a11y/screen.ts"]
 }

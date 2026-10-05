@@ -20,6 +20,10 @@ dist-ssr
 # Cloudflare's local state
 .wrangler
 
+# Playwright's output from the screen tests
+test-results
+playwright-report
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

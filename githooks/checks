@@ -1,7 +1,8 @@
 # One shell command per line, run by githooks/pre-push before a push that runs checks.
-# These match the `checks` job in .github/workflows/ci.yml. The database test (npm run test:db)
-# is CI-only: it needs a local Supabase, which needs Docker, and the machine this repo was
-# scaffolded on has none (2026-09-29).
+# These match the `checks` job in .github/workflows/ci.yml. The database test (npm run test:db) is
+# not in this list because it needs a running local Supabase (`npx supabase start`, on Docker), and
+# a push should not have to start one. It does run on this machine: with Docker Desktop's daemon
+# started it passed 3 of 3 locally on 2026-09-30 (#27). CI runs it on every pull request.
 npm run lint
 npm run format:check
 npm run typecheck

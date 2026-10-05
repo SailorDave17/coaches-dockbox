@@ -1,5 +1,5 @@
 {
-  "name": "coachs-dockbox",
+  "name": "coaches-dockbox",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -14,7 +14,17 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc -b",
-    "test:db": "vitest run --project db"
+    "test:db": "vitest run --project db",
+    "test:unit": "vitest run --project unit",
+    "test:screens": "playwright test",
+    "lint:functions": "deno lint supabase/functions",
+    "typecheck:functions": "deno check supabase/functions",
+    "test:functions": "deno test --allow-env=DOCKBOX_TEST_URL,DOCKBOX_TEST_KEY,DOCKBOX_TEST_TOKEN --allow-read=supabase/functions supabase/functions",
+    "bootstrap:program": "node scripts/bootstrap-program.ts",
+    "check:deploy": "node scripts/check-deploy.ts",
+    "probe:dev": "vite --config spikes/device-probe/vite.config.ts",
+    "probe:build": "tsc -b spikes/device-probe && vite build --config spikes/device-probe/vite.config.ts",
+    "probe:preview": "vite preview --config spikes/device-probe/vite.config.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
@@ -22,15 +32,23 @@
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
-    "@types/node": "^24.13.3",
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
+    "deno": "^2.9.6",
     "oxlint": "^1.81.0",
+    "postcss": "^8.5.28",
+    "postgres": "^3.4.9",
     "prettier": "^3.9.9",
     "supabase": "^2.118.0",
-    "typescript": "~6.0.3",
+    "typescript": "~7.0.2",
     "vite": "^8.3.1",
-    "vitest": "^5.0.2"
+    "vite-plugin-pwa": "^1.3.0",
+    "vitest": "^5.0.2",
+    "wrangler": "4.147.0",
+    "yaml": "^2.9.1"
   }
 }
