@@ -65,12 +65,13 @@ The app refuses to start without those two values, on purpose.
 | `npm run lint` | oxlint; a warning fails |
 | `npm run format:check` | Prettier |
 | `npm run typecheck` | `tsc -b` |
-| `npm run test:db` | The medical-access, seasons and club-time, roster-read, guardian-link and sign-in tests, the API-roles reach guard, the policy-functions catalog test, the heartbeat Edge Function through the gateway, and admission through the admit function, against a local Supabase |
-| `npm run test:unit` | The glare token test: every colour token classified, every text-on-background pair the stylesheets declare held to the glare contrast. Also the sign-in decisions, with a fake auth client, and local Auth's settings in `supabase/config.toml` |
+| `npm run test:db` | The medical-access, seasons and club-time, roster-read, guardian-link and sign-in tests, the API-roles reach guard, the policy-functions catalog test, the heartbeat Edge Function through the gateway, admission through the admit function, and the bootstrap command, against a local Supabase |
+| `npm run test:unit` | The glare token test: every colour token classified, every text-on-background pair the stylesheets declare held to the glare contrast. Also the sign-in decisions, with a fake auth client, local Auth's settings in `supabase/config.toml`, and the bootstrap command's refusals at start |
 | `npm run test:screens` | Every screen through the accessibility helper, in Chromium against the built app. Run `npm run build` first |
 | `npm run lint:functions` | `deno lint` over the Edge Functions in `supabase/functions/` |
 | `npm run typecheck:functions` | `deno check` over the same, strict like the app |
 | `npm run test:functions` | `deno test`: the functions' env loader fails at boot, naming each missing variable |
+| `npm run bootstrap:program` | Creates a program, its first dated season and its director, with their account. Safe to repeat. See below |
 | `npm run probe:build` | The throwaway device probe (#31), not the app: [`spikes/device-probe/`](spikes/device-probe/README.md) |
 
 The Edge Functions are Deno, which `tsc -b` and Vitest do not cover. Deno comes from the
@@ -153,6 +154,23 @@ the row's `auth_user_id` itself: `POST /functions/v1/admit` with `{ "email": "â€
 creates nothing for an email no row carries, is safe to repeat or run twice at once, and never reads
 `user_metadata`, which a user can rewrite. No client may write `auth_user_id`. The shared code is
 `supabase/functions/_shared/admission.ts`, for the roster sync to import.
+
+A program's first director is created by one command (#63), since nothing else can make them with
+sign-ups off:
+
+```sh
+npm run bootstrap:program -- --program "<name>" --season "<name>" --starts YYYY-MM-DD \
+  --ends YYYY-MM-DD --first <first name> --last <last name> --email <address>
+```
+
+It needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in the environment, never in a file, and
+stops before any request without them. The key is the legacy service-role JWT (`SERVICE_ROLE_KEY` in
+`npx supabase status -o env`), because the admit function accepts no other. It creates whatever is
+missing of the program, the season, the director's `people` row, their account (through `admit`) and
+a director membership of the season, and prints the four ids and nothing else. Run again with the
+same arguments, it changes nothing; after a run that stopped part-way, it finishes the job. An
+existing season of that name with other dates, or an existing person with that email under another
+name, stops it before it writes anything.
 
 To sign in locally, start the local Supabase, put its `API_URL` and `ANON_KEY` in `.env.local`, and
 run `npm run dev`, which serves on `http://localhost:5173`, the one origin local Auth sends links back
