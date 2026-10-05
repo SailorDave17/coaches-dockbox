@@ -32,21 +32,26 @@ export default function App() {
   }
 
   return (
-    <main className="shell" aria-busy={view.name === 'loading'}>
-      <h1>Coaches&apos; Dockbox</h1>
-      {view.name === 'sign-in' && (
-        // The link returns to the origin it was asked from, which Auth's allow-list must name.
-        <SignInScreen requestLink={(email) => signIn.requestLink(email, window.location.origin)} />
-      )}
-      {view.name === 'signed-in' && <SignedInScreen firstName={view.firstName} onSignOut={signOut} />}
-      {view.name === 'not-on-roster' && <NotOnRosterScreen onSignOut={signOut} />}
-      {view.name === 'problem' && (
-        <ProblemScreen
-          problem={view.problem}
-          onTryAgain={view.problem === 'unreachable' ? reload : signOut}
-          onSignOut={signOut}
-        />
-      )}
-    </main>
+    <>
+      <main className="shell" aria-busy={view.name === 'loading'}>
+        <h1>Coaches&apos; Dockbox</h1>
+        {view.name === 'sign-in' && (
+          // The link returns to the origin it was asked from, which Auth's allow-list must name.
+          <SignInScreen requestLink={(email) => signIn.requestLink(email, window.location.origin)} />
+        )}
+        {view.name === 'signed-in' && <SignedInScreen firstName={view.firstName} onSignOut={signOut} />}
+        {view.name === 'not-on-roster' && <NotOnRosterScreen onSignOut={signOut} />}
+        {view.name === 'problem' && (
+          <ProblemScreen
+            problem={view.problem}
+            onTryAgain={view.problem === 'unreachable' ? reload : signOut}
+            onSignOut={signOut}
+          />
+        )}
+      </main>
+      {/* The build stamp (#38): which commit this page is. It renders only once the app has started,
+          so the post-deploy check reads it as proof of both (scripts/check-deploy.ts). */}
+      <footer className="build">Build {__BUILD_COMMIT__.slice(0, 7)}</footer>
+    </>
   )
 }

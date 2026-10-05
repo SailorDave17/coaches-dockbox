@@ -66,12 +66,13 @@ The app refuses to start without those two values, on purpose.
 | `npm run format:check` | Prettier |
 | `npm run typecheck` | `tsc -b` |
 | `npm run test:db` | The medical-access, seasons and club-time, roster-read, guardian-link and sign-in tests, the API-roles reach guard, the policy-functions catalog test, the heartbeat Edge Function through the gateway, admission through the admit function, and the bootstrap command, against a local Supabase |
-| `npm run test:unit` | The glare token test: every colour token classified, every text-on-background pair the stylesheets declare held to the glare contrast. Also the sign-in decisions, with a fake auth client, local Auth's settings in `supabase/config.toml`, and the bootstrap command's refusals at start |
-| `npm run test:screens` | Every screen through the accessibility helper, in Chromium against the built app. Run `npm run build` first |
+| `npm run test:unit` | The glare token test: every colour token classified, every text-on-background pair the stylesheets declare held to the glare contrast. Also the sign-in decisions, with a fake auth client, local Auth's settings in `supabase/config.toml`, the bootstrap command's refusals at start, the workflow lint and the deploy job's shape, and the deploy job's two checks before they load a page |
+| `npm run test:screens` | Every screen through the accessibility helper, in Chromium against the built app, the footer's build stamp among them, and the post-deploy check on the built app. Run `npm run build` first |
 | `npm run lint:functions` | `deno lint` over the Edge Functions in `supabase/functions/` |
 | `npm run typecheck:functions` | `deno check` over the same, strict like the app |
 | `npm run test:functions` | `deno test`: the functions' env loader fails at boot, naming each missing variable |
 | `npm run bootstrap:program` | Creates a program, its first dated season and its director, with their account. Safe to repeat. See below |
+| `npm run check:deploy` | The post-deploy check: is the Supabase project up, and is a served page a started app stamped with a given commit. See Deploys |
 | `npm run probe:build` | The throwaway device probe (#31), not the app: [`spikes/device-probe/`](spikes/device-probe/README.md) |
 
 The Edge Functions are Deno, which `tsc -b` and Vitest do not cover. Deno comes from the
@@ -193,6 +194,40 @@ sending mail.
 GitHub refuses them too, whatever the client. A repository ruleset requires a pull request and
 both CI checks on all three branches, and nobody can bypass it (#28). It is enforced only while
 the repository is public (#25).
+
+## Deploys
+
+A push to `release`, which only the owner's merge of a pull request makes, runs the
+`deploy to production` job in `.github/workflows/ci.yml` once both checks pass on that commit (#38).
+It runs these in order and stops at the first failure:
+
+1. It names every secret or variable that is not set.
+2. It refuses a paused project, naming the pause. A Free project pauses after a week unused
+   (ADR 001): restore it from the Supabase dashboard, then re-run the job.
+3. It builds with the live project's two public values, read from Actions variables, and installs
+   the browser the last step uses.
+4. `supabase db push` applies each migration the live project does not have yet.
+5. `supabase functions deploy` deploys every Edge Function, and says so and moves on when there is
+   none.
+6. `wrangler deploy` deploys the Worker.
+7. `npm run check:deploy` loads the address wrangler deployed to in headless Chromium, past any
+   service worker, and fails unless the app started and its build stamp is the merged commit.
+
+**Migrations reach the live project only through this job.** Nobody applies one by hand, from a
+laptop or from a session: a migration merged to `develop` reaches live with the next promotion to
+`release`, and not before.
+
+The job runs in the `production` environment, which admits the `release` branch only, and reads its
+secrets there by name: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_REF`,
+`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`, with `VITE_SUPABASE_URL` and
+`VITE_SUPABASE_ANON_KEY` as variables (#40 stores them). It is the only job that reads a secret.
+`tests/unit/workflows.test.ts` fails any job a pull request can run that reads one, deploys to an
+environment or runs a production command, so a pull request from Dependabot, which is given no
+secrets, runs the same checks as anyone's. Every pull request also checks the Worker's config with
+`wrangler deploy --dry-run`, with no credentials, and lints the workflows with actionlint.
+
+Every page shows the commit it was built from in its footer. To check a deployed page by hand, with
+the two public values in the environment: `npm run check:deploy -- --sha <commit> --url <address>`.
 
 ## Privacy
 

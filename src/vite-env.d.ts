@@ -8,3 +8,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+// The full commit SHA the build was made from, set by vite.config.ts (#38).
+declare const __BUILD_COMMIT__: string

@@ -32,6 +32,15 @@ body {
   padding: 24px 16px;
 }
 
+/* The build stamp (#38), on paper like the page, held to the same 7:1 as every other text. */
+.build {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 0 16px 24px;
+  font-size: 0.875rem;
+  color: var(--navy-deep);
+}
+
 /* Controls (#52). Every one is at least 56 px both ways, the dock's one-thumb size (tests/a11y/screen.ts).
    Scoped to .shell: the helper's own controls load this file, and a bare `button` rule would resize
    the targets they plant. */

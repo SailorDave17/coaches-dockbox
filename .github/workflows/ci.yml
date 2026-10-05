@@ -30,6 +30,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: actionlint
+        # The workflow linter (#38): a pinned release, checked against the sha256 its release
+        # publishes. It runs shellcheck over every run: script too, which ubuntu-latest carries.
+        # Dependabot does not move this pin; a new release is a hand edit of both values.
+        shell: bash
+        run: |
+          curl -sSfL -o "$RUNNER_TEMP/actionlint.tar.gz" \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $RUNNER_TEMP/actionlint.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP" actionlint
+          "$RUNNER_TEMP/actionlint" -color
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
@@ -51,6 +62,11 @@ jobs:
           # the screen tests below scan what the built app renders. Nothing deploys this build.
           VITE_SUPABASE_URL: http://127.0.0.1:54321
           VITE_SUPABASE_ANON_KEY: ci-placeholder-not-a-key
+      # The Worker's config and the built assets, checked by wrangler with no credentials (#38). This
+      # job reads no secret, so a pull request from Dependabot, which is given none, runs it the same.
+      - run: npx wrangler deploy --dry-run
+        env:
+          WRANGLER_SEND_METRICS: 'false'
       # Chromium's headless shell, which is what the screen tests run (#36).
       - run: npx playwright install --with-deps --only-shell chromium
       - run: npm run test:screens
@@ -148,3 +164,103 @@ jobs:
         # instruments catching the same table.
         if: ${{ !cancelled() && steps.credentials.outcome == 'success' }}
         run: npx supabase db advisors --local --type security --fail-on warn
+
+  deploy:
+    # Production (#38, ADR 008). It runs on a push to release and on nothing else, after both checks
+    # have passed on the same commit, and it is the only job that reads a secret. The production
+    # environment admits the release branch only, so its secrets cannot reach another branch's job
+    # either. tests/unit/workflows.test.ts holds this shape, and a step that runs past a failure fails
+    # it: any failure stops the rest. This job is not a required check, because it runs after a merge.
+    name: deploy to production
+    if: github.event_name == 'push' && github.ref == 'refs/heads/release'
+    needs: [checks, db-tests]
+    runs-on: ubuntu-latest
+    environment: production
+    # Two merges in a row deploy in order: the second waits for the first rather than racing it.
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    steps:
+      # The job's own GitHub token is not left in .git/config for the steps that follow.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+      # No install scripts here: later steps hand the production tokens to tools in node_modules, and
+      # an install script is how a compromised package would rewrite them first (security audit on
+      # #38). Nothing this job runs needs one: the build, wrangler, the Supabase CLI and the check
+      # were measured without them, and the browser is installed by its own step.
+      - run: npm ci --ignore-scripts
+      # Each secret travels by name, into the env of the steps that use it and no others, and nothing
+      # here prints one. A secret or variable never added arrives as an empty string; this names it.
+      - name: Refuse a missing secret or variable, naming it
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: >-
+          node scripts/require-env.ts SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_PROJECT_REF
+          CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY
+      # A Free project pauses after a week unused (ADR 001), and every step below would then fail
+      # without saying why. This names the pause before anything reaches production.
+      - name: Refuse a paused project, naming the pause
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: npm run check:deploy -- --project
+      # Built, and the browser for the last step installed, before the first production act, so a
+      # failure in either leaves production untouched.
+      - name: Build with the live project's public values
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: npm run build
+      - run: npx playwright install --with-deps --only-shell chromium
+      # The only way a migration reaches the live project (README). `link` finds the project's IPv4
+      # pooler, which db push then uses: GitHub's runners have no IPv6, and the direct database
+      # address has nothing else on Free.
+      - name: Apply the migrations to the live project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          npx supabase link --project-ref "$SUPABASE_PROJECT_REF"
+          npx supabase db push --yes
+      # Bundled by Supabase rather than in Docker (--use-api), so this job pulls no image. Skipped,
+      # saying so, when supabase/functions holds no function; _shared is code the functions import.
+      - name: Deploy the Edge Functions
+        shell: bash
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          shopt -s nullglob
+          functions=(supabase/functions/[!_]*/index.ts)
+          if [ ${#functions[@]} -eq 0 ]; then
+            echo "No Edge Function under supabase/functions: nothing to deploy"
+            exit 0
+          fi
+          npx supabase functions deploy --use-api --project-ref "$SUPABASE_PROJECT_REF"
+      # Wrangler writes each address it deployed to into this file, which the last step reads.
+      - name: Deploy the Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.json
+          WRANGLER_SEND_METRICS: 'false'
+        run: npx wrangler deploy
+      # D21(b): the served page, past any service worker, must be a started app stamped with this
+      # commit, and the project must not be paused (scripts/check-deploy.ts).
+      - name: Check the served page started and carries this commit
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: npm run check:deploy -- --sha "$GITHUB_SHA" --wrangler-output "$RUNNER_TEMP/wrangler-output.json"
