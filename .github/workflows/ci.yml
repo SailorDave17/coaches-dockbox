@@ -163,7 +163,18 @@ jobs:
           [[ "$MUTATION" =~ ^[a-z0-9-]+$ ]] || { echo "mutation name must be kebab-case"; exit 1; }
           if [ ! -f "tests/mutations/${MUTATION}.sql" ]; then echo "a code mutation: no SQL to apply"; exit 0; fi
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f "tests/mutations/${MUTATION}.sql"
-      - run: npm run test:db
+      - id: test-db
+        run: npm run test:db
+      - name: Print the database log when test:db fails
+        # A client error names a deadlock's relations by OID only. The server's log names each
+        # process's query, and this runner's database is gone when the job ends, so a red test:db
+        # prints it here (#201). The container is named after config.toml's project_id. Any mutation
+        # hand-run that turns test:db red shows this step firing.
+        if: ${{ failure() && steps.test-db.outcome == 'failure' }}
+        shell: bash
+        run: |
+          project_id=$(sed -n 's/^project_id = "\(.*\)"$/\1/p' supabase/config.toml)
+          docker logs "supabase_db_${project_id}" 2>&1
       - name: Security advisors
         # Supabase's own security lints against the local database, beside the catalog test (#34,
         # D69). `--fail-on` defaults to `none`, which never fails a build, so it is set. `warn` is
