@@ -65,14 +65,15 @@ The app refuses to start without those two values, on purpose.
 | `npm run lint` | oxlint; a warning fails |
 | `npm run format:check` | Prettier |
 | `npm run typecheck` | `tsc -b` |
-| `npm run test:db` | The medical-access, seasons and club-time, roster-read, guardian-link and sign-in tests, the API-roles reach guard, the policy-functions catalog test, the heartbeat Edge Function through the gateway, admission through the admit function, and the bootstrap command, against a local Supabase |
-| `npm run test:unit` | The glare token test: every colour token classified, every text-on-background pair the stylesheets declare held to the glare contrast. Also the sign-in decisions, with a fake auth client, local Auth's settings in `supabase/config.toml`, the bootstrap command's refusals at start, the workflow lint and the deploy job's shape, and the deploy job's two checks before they load a page |
+| `npm run test:db` | The medical-access, seasons and club-time, roster-read, guardian-link and sign-in tests, the API-roles reach guard, the policy-functions catalog test, the heartbeat Edge Function through the gateway, scheduled jobs from pg_cron to the function's finished run, admission through the admit function, and the bootstrap command, against a local Supabase |
+| `npm run test:unit` | The glare token test: every colour token classified, every text-on-background pair the stylesheets declare held to the glare contrast. Also the sign-in decisions, with a fake auth client, local Auth's settings in `supabase/config.toml`, the bootstrap command's refusals at start, the workflow lint and the deploy job's shape, the deploy job's two checks before they load a page, the post-deploy secrets check, and the cron-driven functions' settings |
 | `npm run test:screens` | Every screen through the accessibility helper, in Chromium against the built app, the footer's build stamp among them, and the post-deploy check on the built app. Run `npm run build` first |
 | `npm run lint:functions` | `deno lint` over the Edge Functions in `supabase/functions/` |
 | `npm run typecheck:functions` | `deno check` over the same, strict like the app |
-| `npm run test:functions` | `deno test`: the functions' env loader fails at boot, naming each missing variable |
+| `npm run test:functions` | `deno test`: the functions' env loader fails at boot, naming each missing variable, and the scheduled-job handler gives each of its answers, a duplicate delivery doing no work |
 | `npm run bootstrap:program` | Creates a program, its first dated season and its director, with their account. Safe to repeat. See below |
 | `npm run check:deploy` | The post-deploy check: is the Supabase project up, and is a served page a started app stamped with a given commit. See Deploys |
+| `npm run check:secrets` | The post-deploy secrets check: does the live project hold every secret a cron-driven function requires. See Scheduled jobs |
 | `npm run probe:build` | The throwaway device probe (#31), not the app: [`spikes/device-probe/`](spikes/device-probe/README.md) |
 
 The Edge Functions are Deno, which `tsc -b` and Vitest do not cover. Deno comes from the
@@ -85,7 +86,10 @@ the whole stack restarts (`npx supabase stop`, then `start`), because the list o
 when the stack starts; until then its URL answers the gateway's 404.
 
 `test:db` needs a local Supabase (`npx supabase start`, which needs Docker) and its credentials
-exported from `npx supabase status -o env`. CI runs it on every pull request, then runs Supabase's
+exported from `npx supabase status -o env`. Export a `CRON_SECRET` of your own making before
+`supabase start` and keep it exported for the tests (`openssl rand -hex 32` makes one): the edge
+runtime reads it at start, and without it the heartbeat fails at boot, naming it. CI makes a fresh
+one each run. CI runs `test:db` on every pull request, then runs Supabase's
 security advisors against the same database, failing on any warning (#34). To prove the tests can
 fail, run the CI workflow by hand with a `mutation`. With `medical-ignores-program` or
 `anon-select-on-programs`, exactly one case should go red. With `medical-ignores-season-dates`,
@@ -96,7 +100,8 @@ allow-list case. With `medical-any-guardian-passes`, exactly two: the unlinked g
 sailor's guardian. With `guardian-read-ignores-unlink`, exactly one: the unlinked guardian's read.
 With `me-ignores-caller`, exactly three: each sign-in case that reads its own name from `public.me`.
 With `admit-anyone`, exactly one: the admission case for an email on no roster. It is a patch to the
-admit function rather than SQL, so CI applies it before Supabase starts.
+admit function rather than SQL, so CI applies it before Supabase starts. With
+`job-runs-ignore-window`, exactly one: the scheduled-job case that runs one window twice.
 Each file names the cases it expects.
 To prove a step fails where it fails, run it by hand with a `plant`:
 `unreachable-registry` fails every pull, so the `Start Supabase` step tries three times and then
@@ -212,6 +217,8 @@ It runs these in order and stops at the first failure:
 6. `wrangler deploy` deploys the Worker.
 7. `npm run check:deploy` loads the address wrangler deployed to in headless Chromium, past any
    service worker, and fails unless the app started and its build stamp is the merged commit.
+8. `npm run check:secrets` lists the live project's function secrets by name, and fails naming any
+   secret a cron-driven function requires that is not there (see Scheduled jobs).
 
 **Migrations reach the live project only through this job.** Nobody applies one by hand, from a
 laptop or from a session: a migration merged to `develop` reaches live with the next promotion to
@@ -228,6 +235,41 @@ secrets, runs the same checks as anyone's. Every pull request also checks the Wo
 
 Every page shows the commit it was built from in its footer. To check a deployed page by hand, with
 the two public values in the environment: `npm run check:deploy -- --sha <commit> --url <address>`.
+
+## Scheduled jobs
+
+Every scheduled job runs one way (#41, ADR 011). pg_cron runs `private.run_job(<job>, <every>)` on
+the job's schedule. That claims each due window in `public.job_runs`: the current one, and any missed
+since the last run, up to four. For each one it claims, it calls the job's Edge Function through
+pg_net. The function checks the cron secret, does the work, and records the run finished, with `ok`
+and a detail that holds no personal data. A window runs once, because a second claim of it does
+nothing. A finished row is the proof the function ran: `cron.job_run_details` shows only that the
+SQL did. The heartbeat, every 15 minutes, is the first job, and its work is nothing.
+
+A cron-driven function serves through `serveJob` in `supabase/functions/_shared/job.ts`. It is listed
+in `supabase/functions/_shared/scheduled.ts` with the env its loader requires, and under
+`[functions.<name>]` in `supabase/config.toml` with `verify_jwt = false`. pg_cron holds no user, so
+the cron secret is the only credential, and the function refuses any call without it.
+`tests/unit/scheduled-functions.test.ts` and `tests/db/scheduled-jobs.test.ts` fail when the list,
+the config and the cron jobs disagree.
+
+Each project needs one secret, the same value in two places, and the project's own URL. None of it is
+in a migration:
+
+- Vault holds `cron_secret` and `project_url`, which `run_job` reads. Run this in the dashboard's SQL
+  editor: `select vault.create_secret('<the cron secret>', 'cron_secret');` and
+  `select vault.create_secret('https://<ref>.supabase.co', 'project_url');`.
+- The Edge Functions hold the same secret as `CRON_SECRET`: `supabase secrets set CRON_SECRET=<the
+  cron secret>`. The deploy job's last step fails until it is there.
+
+That last step checks the function secret only. It does not read Vault, so a green deploy does not
+show that Vault holds both names, or that its `cron_secret` is the same value as `CRON_SECRET`. A
+mismatch leaves every run refused while the deploy reads green. #44 checks both on live, and #207
+moves the check into every deploy.
+
+Until Vault holds both, each run raises before calling anything, and `cron.job_run_details` says
+which one is missing. A window whose run failed is not retried: the next window runs as usual, and
+emailing the owner about a failed or overdue run is #119's.
 
 ## Privacy
 

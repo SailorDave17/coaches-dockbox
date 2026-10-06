@@ -104,6 +104,14 @@ jobs:
           elif [ ! -f "tests/mutations/${MUTATION}.sql" ]; then
             echo "no tests/mutations/${MUTATION}.patch or .sql"; exit 1
           fi
+      - name: Make this run's cron secret
+        # The local stack's own, made for this run and gone with it (#41). The edge runtime reads it at
+        # `supabase start` (config.toml, [edge_runtime.secrets]), and tests/db/scheduled-jobs.test.ts
+        # stores the same value in Vault. It is no repository secret, so every pull request runs this.
+        # Not masked: it opens only this runner's own local stack, which ends with the job, and no
+        # step prints it (security audit, 2026-10-05).
+        shell: bash
+        run: echo "CRON_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
       - name: Start Supabase (applies supabase/migrations)
         # Retries only when the CLI gives up on an image pull. It prints `toomanyrequests` for
         # every refused try, including the ones it recovers from, so keying on that word would
@@ -264,3 +272,11 @@ jobs:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
         run: npm run check:deploy -- --sha "$GITHUB_SHA" --wrangler-output "$RUNNER_TEMP/wrangler-output.json"
+      # D21(e): the live project must hold every secret a cron-driven function's env loader requires,
+      # or pg_cron calls a function that cannot boot (scripts/check-function-secrets.ts, #41). It lists
+      # the live secrets by name and names each one missing. Last, after the functions are deployed.
+      - name: Check the live project holds each cron-driven function's secrets
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: npm run check:secrets
