@@ -1,0 +1,13 @@
+-- prove-tests mutation for #41. Applied in CI only on a hand-run of the workflow with
+-- `mutation: job-runs-ignore-window`, after the migrations.
+--
+-- It drops the (job, window_start) key that private.run_job's claim meets, so the claim no longer
+-- sees a window it already claimed, and a second run in one window calls the job's function again.
+-- Everything else is unchanged.
+--
+-- Predicted: exactly one red, in scheduled-jobs.test.ts:
+-- - "calls the function once when it is invoked twice for one window".
+-- The catch-up cases claim only windows after the last one, which no earlier claim holds, so the key
+-- never decides them. The cron-fired case reads the first run in its window, which still finishes.
+-- Any other result means the tests are not measuring what they name.
+alter table public.job_runs drop constraint job_runs_job_window_key;

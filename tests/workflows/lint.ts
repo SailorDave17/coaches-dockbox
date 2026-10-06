@@ -186,6 +186,7 @@ const DEPLOY_ORDER: readonly [string, RegExp][] = [
   ['deploy the Edge Functions', /\bsupabase\s+functions\s+deploy\b/],
   ['deploy the Worker', /\bwrangler\s+deploy\b(?![^\n]*--dry-run)/],
   ['check the served page', /\bcheck:deploy -- --sha\b/],
+  ["check the cron-driven functions' secrets", /\bcheck:secrets\b/],
 ]
 
 const BUILD_VALUES = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY']

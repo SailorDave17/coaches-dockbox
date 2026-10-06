@@ -9,10 +9,10 @@
 // admitting from their screen is #90's, which adds its own check of the director's right here.
 import { admit } from '../_shared/admission.ts'
 import { loadEnv } from '../_shared/env.ts'
+import { sameSecret } from '../_shared/same-secret.ts'
 
 const env = loadEnv(['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'])
 const config = { supabaseUrl: env.SUPABASE_URL, serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY }
-const encoder = new TextEncoder()
 
 Deno.serve(async (request) => {
   if (request.method !== 'POST') return answer(405, { error: 'POST only' })
@@ -44,13 +44,4 @@ Deno.serve(async (request) => {
 
 function answer(status: number, body: unknown): Response {
   return Response.json(body, { status })
-}
-
-/** Compares two secrets in time that does not depend on where they first differ. */
-function sameSecret(given: string, expected: string): boolean {
-  const a = encoder.encode(given)
-  const b = encoder.encode(expected)
-  let difference = a.length ^ b.length
-  for (let i = 0; i < b.length; i++) difference |= (a[i] ?? 0) ^ (b[i] ?? 0)
-  return difference === 0
 }
