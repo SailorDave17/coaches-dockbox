@@ -228,6 +228,26 @@ describe('the release pipeline check refuses each planted change to ci.yml, and 
     ])
   })
 
+  it('no post-deploy secrets check (#41)', () => {
+    const planted = changed((deploy) => {
+      deploy.steps = (deploy.steps ?? []).filter((step) => !/check:secrets/.test(step.run ?? ''))
+    })
+    expect(releasePipelineProblems('ci.yml', planted)).toEqual([
+      "ci.yml: the deploy job has no step that does this: check the cron-driven functions' secrets",
+    ])
+  })
+
+  it('the secrets check before the served page is checked', () => {
+    const planted = changed((deploy) => {
+      const all = deploy.steps ?? []
+      const [step] = all.splice(stepRunning(/check:secrets/)(deploy), 1)
+      if (step) all.splice(stepRunning(/check:deploy -- --sha/)(deploy), 0, step)
+    })
+    expect(releasePipelineProblems('ci.yml', planted)).toEqual([
+      "ci.yml: the deploy job does this out of order: check the cron-driven functions' secrets",
+    ])
+  })
+
   it('a secret the job reads that require-env does not check', () => {
     const planted = changed((deploy) => {
       const step = deploy.steps?.[stepRunning(/require-env/)(deploy)]

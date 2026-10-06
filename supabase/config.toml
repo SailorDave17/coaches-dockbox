@@ -389,8 +389,17 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
-# [edge_runtime.secrets]
-# secret_key = "env(SECRET_VALUE)"
+# The cron-driven functions refuse a call without it (#41, supabase/functions/_shared/job.ts). Export
+# CRON_SECRET before `supabase start`: unset, the CLI leaves the name out, and each such function then
+# fails at boot naming it (measured, CLI 2.118). The live value is a function secret (README).
+[edge_runtime.secrets]
+CRON_SECRET = "env(CRON_SECRET)"
+
+# pg_cron holds no user, so a cron-driven function gets no JWT from the gateway's check: it checks the
+# cron secret itself, before reading anything (#41). Every function in
+# supabase/functions/_shared/scheduled.ts is listed here, and no other.
+[functions.heartbeat]
+verify_jwt = false
 
 [analytics]
 enabled = true
