@@ -46,7 +46,7 @@
     "prettier": "^3.9.9",
     "supabase": "^2.119.0",
     "typescript": "~7.0.2",
-    "vite": "^8.3.2",
+    "vite": "^8.3.5",
     "vite-plugin-pwa": "^2.0.0",
     "vitest": "^5.0.3",
     "wrangler": "4.147.0",
